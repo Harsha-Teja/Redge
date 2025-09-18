@@ -72,9 +72,11 @@
                         </select>
                     </label>
 
-                    <label>Storage (total TB)
+                    <label>Storage (total TB) and Annual compute growth (%)
                         <input id="storageTB" type="number" value="400" min="0" required />
+                        <input id="growthPct" type="number" value="10" min="0" max="100" step="1" />
                     </label>
+                    <!-- NEW: Forecasting -->
 
                     <button class="btn" type="submit">Submit</button>
                 </form>
