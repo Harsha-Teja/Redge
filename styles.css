@@ -1,0 +1,361 @@
+:root {
+    /* Ireland-inspired palette — clean, calm */
+    --bg: #f4f6f4;
+    /* soft grey-green */
+    --card: #ffffff;
+    --text: #0f172a;
+    /* slate-900 */
+    --muted: #475569;
+    /* slate-600 */
+    --accent: #2e7d32;
+    /* deep green */
+    --accent-600: #256628;
+    --border: #e5e7eb;
+    --radius: 16px;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0
+}
+
+img {
+    display: block;
+    max-width: 100%;
+    height: auto
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
+}
+
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px
+}
+
+.topbar h1 {
+    font-size: 22px;
+    margin: 0;
+    color: var(--accent)
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(8, 15, 33, 0.04);
+}
+
+/* ---------- TWO-PART LANDING (form left, map right) ---------- */
+.hero {
+    display: grid;
+    gap: 16px;
+    padding-top: 25px;
+    margin-top: 20px;
+    align-items: start;
+    grid-template-columns: 1fr;
+    /* mobile: stacked */
+    grid-template-areas:
+        "form"
+        "map";
+}
+
+.form-card {
+    grid-area: form;
+}
+
+.map-card {
+    grid-area: map;
+}
+
+@media (min-width: 700px) {
+
+    /* tablet+ = split */
+    .hero {
+        grid-template-columns: 1.1fr 0.9fr;
+        /* wider form */
+        grid-template-areas: "form map";
+    }
+
+    .map-card {
+        position: sticky;
+        top: 16px;
+    }
+}
+
+/* ---------- FORM ---------- */
+.title {
+    font-weight: 600;
+    margin: 0 0 10px
+}
+
+.title.sm {
+    font-size: 16px
+}
+
+.form-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+}
+
+.form-grid label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted)
+}
+
+.form-grid input,
+.form-grid select {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    background: #fff;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+    border-color: var(--accent)
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.checkbox input {
+    width: auto;
+    margin: 0
+}
+
+.btn {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    justify-self: start;
+    margin-top: 4px;
+}
+
+.btn:hover {
+    background: var(--accent-600)
+}
+
+.hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px
+}
+
+/* ---------- MAP ---------- */
+.map-wrap {
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f0f4f0 0%, #e6efe6 100%);
+    overflow: hidden;
+}
+
+.map-card img {
+    max-width: 100%;
+    max-height: 100%;
+    filter: saturate(0.9) hue-rotate(330deg) contrast(1.05);
+    /* subtle green tint */
+}
+
+.map-caption {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+
+}
+
+/* ---------- RESULTS ---------- */
+.results {
+    margin-top: 40px;
+    display: grid;
+    gap: 16px
+}
+
+.card.wide {
+    grid-column: 1 / -1
+}
+
+.kpis {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr
+}
+
+@media(min-width:640px) {
+    .kpis {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.kpi {
+    background: #f6faf6;
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 12px;
+    text-align: center
+}
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--muted)
+}
+
+.kpi-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent)
+}
+
+.grid3 {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr
+}
+
+@media(min-width:900px) {
+    .grid3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.breakdown {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 6px;
+}
+
+/* Make each item a two-column grid: label | value, with the explanation spanning full width */
+.breakdown li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 8px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+    border-bottom: 1px dashed #eef2ef;
+    padding: 6px 0;
+}
+
+.breakdown li b {
+    color: var(--text);
+}
+
+/* One-line definition under the row */
+.breakdown li .explain {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+
+.totals {
+    margin-top: 10px;
+    background: #f6faf6;
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 14px
+}
+
+.totals b {
+    font-size: 16px
+}
+
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px
+}
+
+/* testing  */
+
+/* 1) Make columns equal height */
+.hero {
+    display: grid;
+    gap: 16px;
+    padding-top: 25px;
+    margin-top: 20px;
+    align-items: stretch;
+    /* was: start */
+    grid-template-columns: 1fr;
+    grid-template-areas:
+        "form"
+        "map";
+}
+
+/* 2) Make the image fill its container */
+.map-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.9) hue-rotate(330deg) contrast(1.05);
+}
+
+@media (max-width: 699px) {
+    .map-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        /* show whole image inside the map-wrap */
+    }
+}
+
+/* 3) Desktop: match map height to form height */
+@media (min-width: 700px) {
+    .hero {
+        grid-template-columns: 1.1fr 0.9fr;
+        grid-template-areas: "form map";
+        align-items: stretch;
+        /* ensure equal-height cards */
+    }
+
+    .map-card {
+        position: sticky;
+        top: 16px;
+        display: flex;
+        height: 100%;
+    }
+
+    .map-wrap {
+        flex: 1;
+        height: 100%;
+        aspect-ratio: auto;
+        /* override mobile ratio */
+    }
+}
