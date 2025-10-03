@@ -625,7 +625,8 @@ export default function Overview()
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Your Requirements</h3>
 
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                            <form name="customer-lead" method="POST" data-netlify="true" onSubmit={handleSubmit} className="space-y-6">
+                                <input type="hidden" name="form-name" value="customer-lead" />
                                 {/* Company Information Section */}
                                 <div className="space-y-4">
                                     <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-1">
@@ -1565,9 +1566,8 @@ export default function Overview()
                                     disabled={isCalculating || hasSubmittedMainForm}
                                     className={`w-full text-white py-3 px-4 rounded-lg font-semibold text-base transition-all duration-200 transform shadow-lg ${hasSubmittedMainForm
                                         ? 'bg-gray-500 cursor-not-allowed'
-                                        : 'hover:opacity-90 hover:scale-105'
+                                        : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
                                         }`}
-                                    style={{ backgroundColor: hasSubmittedMainForm ? undefined : ESB_BLUE }}
                                 >
                                     {isCalculating ? (
                                         <div className="flex items-center justify-center">

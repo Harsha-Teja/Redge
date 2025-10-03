@@ -1,13 +1,65 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>redge</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>redge</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+
+  <!-- Hidden forms for Netlify Forms registration -->
+  <form name="customer-lead" netlify hidden>
+    <input type="text" name="companyName" />
+    <input type="email" name="email" />
+    <input type="text" name="role" />
+    <input type="text" name="eircode" />
+    <input type="text" name="sector" />
+    <input type="text" name="sectorOther" />
+    <input type="text" name="workloadType" />
+    <input type="text" name="dataSovereignty" />
+    <input type="text" name="compliance" />
+    <input type="text" name="availabilityTier" />
+    <input type="number" name="currentITLoad" />
+    <input type="number" name="currentRacks" />
+    <input type="number" name="currentDensity" />
+    <input type="number" name="growth12Month" />
+    <input type="number" name="growth24Month" />
+    <input type="number" name="growth36Month" />
+    <input type="number" name="gpuAIShare" />
+    <input type="number" name="storageGrowthRate" />
+    <input type="number" name="bandwidthGbps" />
+    <input type="text" name="preferredCarriers" />
+    <input type="text" name="renewableTarget" />
+    <input type="text" name="contractTerm" />
+    <input type="text" name="dataCentreService" />
+    <input type="number" name="utilisationRamp" />
+    <input type="text" name="earliestServiceDate" />
+    <input type="number" name="micLimit" />
+    <input type="number" name="existingLoad" />
+  </form>
+
+  <form name="contact-form" netlify hidden>
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <textarea name="message"></textarea>
+  </form>
+
+  <form name="advanced-lead" netlify hidden>
+    <input type="text" name="primaryUse" />
+    <input type="checkbox" name="wasteHeatReuse" />
+    <input type="range" name="pueExpectation" />
+    <input type="radio" name="commercialPreference" />
+    <input type="number" name="capexBudget" />
+    <input type="number" name="opexBudget" />
+    <input type="text" name="contractLength" />
+    <input type="text" name="sustainabilityTarget" />
+    <input type="checkbox" name="compliance" />
+  </form>
+</body>
+
 </html>
