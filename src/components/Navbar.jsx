@@ -5,12 +5,12 @@
  * Features active tab highlighting, mobile hamburger menu, and CTA button.
  */
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function Navbar()
 {
+    const location = useLocation()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [activeTab, setActiveTab] = useState('discover')
     const [isContactModalOpen, setIsContactModalOpen] = useState(false)
     const [contactForm, setContactForm] = useState({
         name: '',
@@ -18,10 +18,23 @@ export default function Navbar()
         message: ''
     })
 
+    // Determine active tab based on current location
+    const getActiveTab = () =>
+    {
+        const path = location.pathname
+        if (path === '/' || path === '/discover') return 'discover'
+        if (path === '/latest') return 'latest'
+        if (path === '/sites') return 'sites'
+        if (path === '/analysis') return 'analysis'
+        return 'discover' // default
+    }
+
+    const activeTab = getActiveTab()
+
     const navigationItems = [
         { id: 'discover', label: 'Discover', href: '/discover' },
-        { id: 'sites', label: 'Sites', href: '#sites' },
-        { id: 'analysis', label: 'Analysis', href: '#analysis' },
+        { id: 'sites', label: 'Sites', href: '/sites' },
+        { id: 'analysis', label: 'Analysis', href: '/analysis' },
         { id: 'latest', label: 'Latest', href: '/latest' }
     ]
 
@@ -86,7 +99,6 @@ export default function Navbar()
                             {item.href.startsWith('/') ? (
                                 <Link
                                     to={item.href}
-                                    onClick={() => setActiveTab(item.id)}
                                     className={`pb-1 transition-colors hover:text-gray-900 ${activeTab === item.id
                                         ? 'border-b-2 border-emeraldGreen text-gray-900'
                                         : ''
@@ -97,7 +109,6 @@ export default function Navbar()
                             ) : (
                                 <a
                                     href={item.href}
-                                    onClick={() => setActiveTab(item.id)}
                                     className={`pb-1 transition-colors hover:text-gray-900 ${activeTab === item.id
                                         ? 'border-b-2 border-emeraldGreen text-gray-900'
                                         : ''
@@ -151,11 +162,7 @@ export default function Navbar()
                                 <Link
                                     key={item.id}
                                     to={item.href}
-                                    onClick={() =>
-                                    {
-                                        setActiveTab(item.id)
-                                        setIsMobileMenuOpen(false)
-                                    }}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                     className={`block py-2 text-sm transition-colors hover:text-gray-900 ${activeTab === item.id
                                         ? 'border-l-4 border-emeraldGreen pl-3 text-gray-900'
                                         : 'text-gray-600'
@@ -167,11 +174,7 @@ export default function Navbar()
                                 <a
                                     key={item.id}
                                     href={item.href}
-                                    onClick={() =>
-                                    {
-                                        setActiveTab(item.id)
-                                        setIsMobileMenuOpen(false)
-                                    }}
+                                    onClick={() => setIsMobileMenuOpen(false)}
                                     className={`block py-2 text-sm transition-colors hover:text-gray-900 ${activeTab === item.id
                                         ? 'border-l-4 border-emeraldGreen pl-3 text-gray-900'
                                         : 'text-gray-600'
