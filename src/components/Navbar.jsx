@@ -49,16 +49,15 @@ export default function Navbar()
 
     const handleContactSubmit = (e) =>
     {
-        e.preventDefault()
-
         // Check if form is valid
         if (!contactForm.name || !contactForm.email || !contactForm.message)
         {
+            e.preventDefault()
             alert('Please fill in all fields.')
             return
         }
 
-        // Here you would typically send the form data to your backend
+        // Don't prevent default - let Netlify handle the form submission
         console.log('Contact form submitted:', contactForm)
 
         // Show success message

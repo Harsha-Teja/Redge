@@ -416,15 +416,16 @@ export default function Overview()
      */
     const handleSurveySubmit = async (e) =>
     {
-        e.preventDefault()
-
         // Check if already submitted
         if (hasSubmittedSurvey)
         {
+            e.preventDefault()
             alert('You have already submitted the survey. Thank you for your submission!')
             closeSurveyModal()
             return
         }
+
+        // Don't prevent default - let Netlify handle the form submission
 
         // Store in localStorage
         const submissionData = {
@@ -462,14 +463,15 @@ export default function Overview()
      */
     async function handleSubmit(e)
     {
-        e.preventDefault()
-
         // Check if already submitted
         if (hasSubmittedMainForm)
         {
+            e.preventDefault()
             alert('You have already submitted the main form. Thank you for your submission!')
             return
         }
+
+        // Don't prevent default - let Netlify handle the form submission
 
         setIsCalculating(true)
 
