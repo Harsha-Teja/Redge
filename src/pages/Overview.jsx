@@ -630,7 +630,7 @@ export default function Overview()
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Your Requirements</h3>
 
-                            <form name="customer-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" onSubmit={handleSubmit} className="space-y-6">
+                            <form name="customer-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-6">
                                 <input type="hidden" name="form-name" value="customer-lead" />
                                 <div style={{ display: 'none' }}>
                                     <label>Don't fill this out if you're human: <input name="bot-field" /></label>
@@ -1571,19 +1571,71 @@ export default function Overview()
                                 {/* Submit Button */}
                                 <button
                                     type="submit"
-                                    disabled={isCalculating || hasSubmittedMainForm}
-                                    className={`w-full text-white py-3 px-4 rounded-lg font-semibold text-base transition-all duration-200 transform shadow-lg ${hasSubmittedMainForm
-                                        ? 'bg-gray-500 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
-                                        }`}
+                                    onClick={() =>
+                                    {
+                                        // Show loading state
+                                        setIsCalculating(true)
+
+                                        // Simulate calculation and show results
+                                        setTimeout(() =>
+                                        {
+                                            const mockResults = {
+                                                onPremises: {
+                                                    total: 285000,
+                                                    details: {
+                                                        'Electricity': 45000,
+                                                        'Staffing': 120000,
+                                                        'Compliance': 25000,
+                                                        'Connectivity': 15000,
+                                                        'Hardware': 60000,
+                                                        'Maintenance': 20000
+                                                    }
+                                                },
+                                                colocation: {
+                                                    total: 195000,
+                                                    details: {
+                                                        'Rack Space': 80000,
+                                                        'Power & Cooling': 35000,
+                                                        'Connectivity': 25000,
+                                                        'Management': 30000,
+                                                        'Compliance': 15000,
+                                                        'Setup': 10000
+                                                    }
+                                                },
+                                                publicCloud: {
+                                                    total: 165000,
+                                                    details: {
+                                                        'Compute Instances': 70000,
+                                                        'Storage': 25000,
+                                                        'Network': 15000,
+                                                        'Management': 20000,
+                                                        'Data Transfer': 10000,
+                                                        'Support': 25000
+                                                    }
+                                                }
+                                            }
+
+                                            setResults(mockResults)
+                                            setIsCalculating(false)
+
+                                            // Scroll to results
+                                            setTimeout(() =>
+                                            {
+                                                const resultsSection = document.getElementById('results-section')
+                                                if (resultsSection)
+                                                {
+                                                    resultsSection.scrollIntoView({ behavior: 'smooth' })
+                                                }
+                                            }, 100)
+                                        }, 2000)
+                                    }}
+                                    className="w-full text-white py-3 px-4 rounded-lg font-semibold text-base transition-all duration-200 transform shadow-lg bg-blue-600 hover:bg-blue-700 hover:scale-105"
                                 >
                                     {isCalculating ? (
                                         <div className="flex items-center justify-center">
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                                             Calculating...
                                         </div>
-                                    ) : hasSubmittedMainForm ? (
-                                        'Form Already Submitted ✓'
                                     ) : (
                                         'Calculate Costs'
                                     )}
@@ -1769,7 +1821,7 @@ export default function Overview()
                             </button>
                         </div>
 
-                        <form name="advanced-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" onSubmit={handleSurveySubmit} className="space-y-4">
+                        <form name="advanced-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
                             <input type="hidden" name="form-name" value="advanced-lead" />
                             <div style={{ display: 'none' }}>
                                 <label>Don't fill this out if you're human: <input name="bot-field" /></label>
@@ -1947,6 +1999,14 @@ export default function Overview()
                             {/* Submit Button */}
                             <button
                                 type="submit"
+                                onClick={() =>
+                                {
+                                    // Close modal after submission
+                                    setTimeout(() =>
+                                    {
+                                        closeSurveyModal()
+                                    }, 1000)
+                                }}
                                 className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors duration-200"
                             >
                                 Submit Survey
