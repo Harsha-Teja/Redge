@@ -20,9 +20,9 @@
     <input type="text" name="eircode" />
     <input type="text" name="sector" />
     <input type="text" name="sectorOther" />
-    <input type="text" name="workloadType" />
     <input type="text" name="dataSovereignty" />
     <input type="text" name="compliance" />
+    <input type="text" name="latencyTolerance" />
     <input type="text" name="availabilityTier" />
     <input type="number" name="currentITLoad" />
     <input type="number" name="currentRacks" />
@@ -31,16 +31,17 @@
     <input type="number" name="growth24Month" />
     <input type="number" name="growth36Month" />
     <input type="number" name="gpuAIShare" />
+    <input type="number" name="storageTB" />
     <input type="number" name="storageGrowthRate" />
     <input type="number" name="bandwidthGbps" />
     <input type="text" name="preferredCarriers" />
     <input type="text" name="renewableTarget" />
     <input type="text" name="contractTerm" />
     <input type="text" name="dataCentreService" />
-    <input type="number" name="utilisationRamp" />
+    <input type="text" name="utilisationRamp" />
     <input type="text" name="earliestServiceDate" />
-    <input type="number" name="micLimit" />
-    <input type="number" name="existingLoad" />
+    <input type="text" name="micLimit" />
+    <input type="text" name="existingLoad" />
   </form>
 
   <form name="contact-form" netlify hidden>
@@ -59,6 +60,11 @@
     <input type="text" name="contractLength" />
     <input type="text" name="sustainabilityTarget" />
     <input type="checkbox" name="compliance" />
+  </form>
+
+  <!-- Test form to verify Netlify Forms is working -->
+  <form name="test-form" netlify hidden>
+    <input type="text" name="testField" />
   </form>
 </body>
 
