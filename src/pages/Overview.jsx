@@ -630,8 +630,11 @@ export default function Overview()
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Your Requirements</h3>
 
-                            <form name="customer-lead" method="POST" action="/" data-netlify="true" onSubmit={handleSubmit} className="space-y-6">
+                            <form name="customer-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" onSubmit={handleSubmit} className="space-y-6">
                                 <input type="hidden" name="form-name" value="customer-lead" />
+                                <div style={{ display: 'none' }}>
+                                    <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                                </div>
                                 {/* Company Information Section */}
                                 <div className="space-y-4">
                                     <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-1">
@@ -1766,8 +1769,11 @@ export default function Overview()
                             </button>
                         </div>
 
-                        <form name="advanced-lead" method="POST" action="/" data-netlify="true" onSubmit={handleSurveySubmit} className="space-y-4">
+                        <form name="advanced-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" onSubmit={handleSurveySubmit} className="space-y-4">
                             <input type="hidden" name="form-name" value="advanced-lead" />
+                            <div style={{ display: 'none' }}>
+                                <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                            </div>
 
                             {/* Primary Use */}
                             <div>

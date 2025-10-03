@@ -13,7 +13,7 @@
   <script type="module" src="/src/main.jsx"></script>
 
   <!-- Hidden forms for Netlify Forms registration -->
-  <form name="customer-lead" netlify hidden>
+  <form name="customer-lead" netlify netlify-honeypot="bot-field" hidden>
     <input type="text" name="companyName" />
     <input type="email" name="email" />
     <input type="text" name="role" />
@@ -42,15 +42,17 @@
     <input type="text" name="earliestServiceDate" />
     <input type="text" name="micLimit" />
     <input type="text" name="existingLoad" />
+    <input type="text" name="bot-field" />
   </form>
 
-  <form name="contact-form" netlify hidden>
+  <form name="contact-form" netlify netlify-honeypot="bot-field" hidden>
     <input type="text" name="name" />
     <input type="email" name="email" />
     <textarea name="message"></textarea>
+    <input type="text" name="bot-field" />
   </form>
 
-  <form name="advanced-lead" netlify hidden>
+  <form name="advanced-lead" netlify netlify-honeypot="bot-field" hidden>
     <input type="text" name="primaryUse" />
     <input type="checkbox" name="wasteHeatReuse" />
     <input type="range" name="pueExpectation" />
@@ -60,6 +62,7 @@
     <input type="text" name="contractLength" />
     <input type="text" name="sustainabilityTarget" />
     <input type="checkbox" name="compliance" />
+    <input type="text" name="bot-field" />
   </form>
 
   <!-- Test form to verify Netlify Forms is working -->
