@@ -24,15 +24,6 @@ L.Icon.Default.mergeOptions({
 const ESB_BLUE = '#005CAB'
 const EMERALD_GREEN = '#009B77'
 
-// Ireland Counties Data
-const IRELAND_COUNTIES = [
-    'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal',
-    'Down', 'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny',
-    'Laois', 'Leitrim', 'Limerick', 'Longford', 'Louth', 'Mayo', 'Meath',
-    'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary', 'Tyrone',
-    'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
-]
-
 // Sectors
 const SECTORS = [
     'Pharma', 'MedTech', 'Financial', 'Government', 'Other'
@@ -148,6 +139,10 @@ export default function Overview()
     const [isCalculating, setIsCalculating] = useState(false)
     const [expandedCard, setExpandedCard] = useState(null)
     const [selectedLocation, setSelectedLocation] = useState(null)
+    const [locations, setLocations] = useState([])
+    const [selectedLocationData, setSelectedLocationData] = useState(null)
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
 
     // Advanced Survey Modal State
     const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false)
@@ -185,6 +180,29 @@ export default function Overview()
             setHasSubmittedSurvey(true)
         }
     }, [])
+
+    // Load locations data from ie.json
+    useEffect(() =>
+    {
+        fetch('/data/ie.json')
+            .then(response => response.json())
+            .then(data => setLocations(data))
+            .catch(error => console.error('Error loading locations:', error))
+    }, [])
+
+    // Close dropdown when clicking outside
+    useEffect(() =>
+    {
+        function handleClickOutside(event)
+        {
+            if (isDropdownOpen && !event.target.closest('.dropdown-container'))
+            {
+                setIsDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [isDropdownOpen])
 
     /**
      * Update selected location when form data changes
@@ -234,6 +252,42 @@ export default function Overview()
         )
     }
 
+    function MapController()
+    {
+        const map = useMap()
+
+        useEffect(() =>
+        {
+            if (selectedLocationData)
+            {
+                map.flyTo([parseFloat(selectedLocationData.lat), parseFloat(selectedLocationData.lng)], 12)
+            }
+        }, [selectedLocationData, map])
+
+        return null
+    }
+
+    // Create a simple red marker with fallback
+    function createRedMarker()
+    {
+        try
+        {
+            // Create a simple red circle marker
+            const redMarker = L.divIcon({
+                className: 'custom-red-marker',
+                html: '<div style="background-color: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10],
+                popupAnchor: [0, -10]
+            })
+            return redMarker
+        } catch (error)
+        {
+            // Fallback to default marker if custom marker fails
+            return new L.Icon.Default()
+        }
+    }
+
     /**
      * Get approximate coordinates for Irish counties
      */
@@ -281,6 +335,28 @@ export default function Overview()
             [name]: type === 'checkbox' ? checked : value
         }))
     }
+
+    /**
+     * Handle location selection from dropdown
+     */
+    function handleLocationSelect(location)
+    {
+        setSelectedLocationData(location)
+        setFormData(prev => ({
+            ...prev,
+            eircode: `${location.city} (${location.admin_name})`
+        }))
+        setIsDropdownOpen(false)
+        setSearchTerm('')
+    }
+
+    /**
+     * Filter locations based on search term
+     */
+    const filteredLocations = locations.filter(location =>
+        location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        location.admin_name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
     /**
      * Handle survey form input changes
@@ -509,16 +585,38 @@ export default function Overview()
                             <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Ireland Map</h3>
                             <div className="w-full rounded-lg border border-gray-200 shadow-inner overflow-hidden relative z-0">
                                 <MapContainer
-                                    center={[53.41291, -8.24389]}
-                                    zoom={7}
+                                    center={[53.4, -7.9]}
+                                    zoom={6}
                                     style={{ height: '400px', width: '100%' }}
                                     className="rounded-lg"
+                                    maxBounds={[[51.3, -10.7], [55.5, -5.3]]}
+                                    maxBoundsViscosity={1.0}
+                                    scrollWheelZoom={true}
+                                    doubleClickZoom={true}
+                                    dragging={true}
+                                    zoomControl={true}
                                 >
                                     <TileLayer
                                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        maxZoom={18}
+                                        minZoom={6}
+                                        subdomains={['a', 'b', 'c']}
                                     />
+                                    <MapController />
                                     <CustomMarker />
+                                    {selectedLocationData && (
+                                        <Marker position={[parseFloat(selectedLocationData.lat), parseFloat(selectedLocationData.lng)]} icon={createRedMarker()}>
+                                            <Popup>
+                                                <div className="p-2">
+                                                    <b>{selectedLocationData.city}</b>
+                                                    <br />
+                                                    {selectedLocationData.admin_name}
+                                                    <br />
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    )}
                                 </MapContainer>
                             </div>
                         </div>
@@ -620,7 +718,7 @@ export default function Overview()
                                             </div>
                                         </div>
 
-                                        {/* Eircode */}
+                                        {/* Location Dropdown */}
                                         <div className="group">
                                             <label className="block text-xs font-medium text-gray-700 mb-2">
                                                 <span className="flex items-center gap-1">
@@ -628,26 +726,58 @@ export default function Overview()
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     </svg>
-                                                    Eircode / Site Location *
+                                                    Area / City *
                                                 </span>
                                             </label>
-                                            <div className="relative">
+                                            <div className="relative dropdown-container">
                                                 <input
                                                     type="text"
-                                                    name="eircode"
-                                                    value={formData.eircode}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                    className="w-full px-3 py-2.5 pl-10 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
-                                                    placeholder="e.g., D02 XY12 or Dublin 2"
+                                                    value={searchTerm}
+                                                    onChange={(e) =>
+                                                    {
+                                                        setSearchTerm(e.target.value)
+                                                        setIsDropdownOpen(true)
+                                                    }}
+                                                    onFocus={() => setIsDropdownOpen(true)}
+                                                    placeholder="Search cities or areas..."
+                                                    className="w-full px-3 py-2.5 pl-10 pr-10 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
                                                 />
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                     <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                                     </svg>
                                                 </div>
+                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+
+                                                {/* Dropdown */}
+                                                {isDropdownOpen && (
+                                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                                        {filteredLocations.length > 0 ? (
+                                                            filteredLocations.map((location, index) => (
+                                                                <div
+                                                                    key={index}
+                                                                    onClick={() => handleLocationSelect(location)}
+                                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                                                                >
+                                                                    <div className="font-medium text-gray-900">{location.city}</div>
+                                                                    <div className="text-xs text-gray-500">{location.admin_name}</div>
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <div className="px-3 py-2 text-sm text-gray-500">No locations found</div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
+                                            {selectedLocationData && (
+                                                <div className="mt-2 text-xs text-green-600">
+                                                    Selected: {selectedLocationData.city} ({selectedLocationData.admin_name})
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Sector */}
