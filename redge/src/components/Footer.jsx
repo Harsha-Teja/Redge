@@ -40,7 +40,7 @@ export default function Footer()
             {/* Bottom Copyright Bar */}
             <div className="border-t border-gray-200 bg-gray-50">
                 <div className="mx-auto max-w-6xl px-6 py-4 text-center text-sm text-gray-500">
-                    Copyright © ESB / Resilient Edge 2025
+                    Copyright © ESB / ReDge 2025
                 </div>
             </div>
         </footer>

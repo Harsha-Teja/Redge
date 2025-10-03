@@ -5,6 +5,7 @@
  * Features active tab highlighting, mobile hamburger menu, and CTA button.
  */
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Navbar()
 {
@@ -15,7 +16,7 @@ export default function Navbar()
         { id: 'discover', label: 'Discover', href: '#discover' },
         { id: 'sites', label: 'Sites', href: '#sites' },
         { id: 'analysis', label: 'Analysis', href: '#analysis' },
-        { id: 'Latest', label: 'Latest', href: '#latest' }
+        { id: 'latest', label: 'Latest', href: '/latest' }
     ]
 
     return (
@@ -34,16 +35,29 @@ export default function Navbar()
                 <ul className="hidden items-center gap-8 text-sm text-gray-600 md:flex">
                     {navigationItems.map((item) => (
                         <li key={item.id}>
-                            <a
-                                href={item.href}
-                                onClick={() => setActiveTab(item.id)}
-                                className={`pb-1 transition-colors hover:text-gray-900 ${activeTab === item.id
-                                    ? 'border-b-2 border-emeraldGreen text-gray-900'
-                                    : ''
-                                    }`}
-                            >
-                                {item.label}
-                            </a>
+                            {item.href.startsWith('/') ? (
+                                <Link
+                                    to={item.href}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`pb-1 transition-colors hover:text-gray-900 ${activeTab === item.id
+                                        ? 'border-b-2 border-emeraldGreen text-gray-900'
+                                        : ''
+                                        }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            ) : (
+                                <a
+                                    href={item.href}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`pb-1 transition-colors hover:text-gray-900 ${activeTab === item.id
+                                        ? 'border-b-2 border-emeraldGreen text-gray-900'
+                                        : ''
+                                        }`}
+                                >
+                                    {item.label}
+                                </a>
+                            )}
                         </li>
                     ))}
                 </ul>
@@ -84,21 +98,39 @@ export default function Navbar()
                 <div className="border-t border-gray-200 bg-white md:hidden">
                     <div className="px-6 py-4 space-y-3">
                         {navigationItems.map((item) => (
-                            <a
-                                key={item.id}
-                                href={item.href}
-                                onClick={() =>
-                                {
-                                    setActiveTab(item.id)
-                                    setIsMobileMenuOpen(false)
-                                }}
-                                className={`block py-2 text-sm transition-colors hover:text-gray-900 ${activeTab === item.id
-                                    ? 'border-l-4 border-emeraldGreen pl-3 text-gray-900'
-                                    : 'text-gray-600'
-                                    }`}
-                            >
-                                {item.label}
-                            </a>
+                            item.href.startsWith('/') ? (
+                                <Link
+                                    key={item.id}
+                                    to={item.href}
+                                    onClick={() =>
+                                    {
+                                        setActiveTab(item.id)
+                                        setIsMobileMenuOpen(false)
+                                    }}
+                                    className={`block py-2 text-sm transition-colors hover:text-gray-900 ${activeTab === item.id
+                                        ? 'border-l-4 border-emeraldGreen pl-3 text-gray-900'
+                                        : 'text-gray-600'
+                                        }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            ) : (
+                                <a
+                                    key={item.id}
+                                    href={item.href}
+                                    onClick={() =>
+                                    {
+                                        setActiveTab(item.id)
+                                        setIsMobileMenuOpen(false)
+                                    }}
+                                    className={`block py-2 text-sm transition-colors hover:text-gray-900 ${activeTab === item.id
+                                        ? 'border-l-4 border-emeraldGreen pl-3 text-gray-900'
+                                        : 'text-gray-600'
+                                        }`}
+                                >
+                                    {item.label}
+                                </a>
+                            )
                         ))}
                         <button
                             type="button"
