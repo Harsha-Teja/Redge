@@ -53,22 +53,8 @@ exports.handler = async (event, context) =>
         console.log('Using site ID:', siteId)
         console.log('Access token present:', !!accessToken)
 
-        // For now, return empty submissions to test the function
-        console.log('Returning empty submissions for testing')
-        return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({
-                submissions: [],
-                count: 0,
-                message: 'Function is working - ready to fetch real data',
-                siteId: siteId
-            })
-        }
-
-        // TODO: Uncomment this section once the function is working
-        /*
         // Fetch form submissions from Netlify Forms API
+        console.log('Fetching from API:', `https://api.netlify.com/api/v1/sites/${siteId}/forms/customer-lead/submissions`)
         const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/forms/customer-lead/submissions`, {
             method: 'GET',
             headers: {
@@ -77,12 +63,18 @@ exports.handler = async (event, context) =>
             }
         })
 
-        if (!response.ok) {
+        console.log('API response status:', response.status)
+        console.log('API response ok:', response.ok)
+
+        if (!response.ok)
+        {
+            const errorText = await response.text()
+            console.error('API error response:', errorText)
             throw new Error(`Netlify API error: ${response.status} ${response.statusText}`)
         }
 
         const data = await response.json()
-        console.log('API response:', data)
+        console.log('API response data:', data)
 
         // Transform the data to match our expected format
         const submissions = data.map((submission, index) => ({
@@ -99,6 +91,8 @@ exports.handler = async (event, context) =>
             submittedAt: submission.created_at || new Date().toISOString()
         }))
 
+        console.log('Transformed submissions:', submissions)
+
         return {
             statusCode: 200,
             headers,
@@ -107,7 +101,6 @@ exports.handler = async (event, context) =>
                 count: submissions.length
             })
         }
-        */
 
     } catch (error)
     {
