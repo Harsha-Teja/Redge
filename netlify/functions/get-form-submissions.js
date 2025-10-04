@@ -53,9 +53,54 @@ exports.handler = async (event, context) =>
         console.log('Using site ID:', siteId)
         console.log('Access token present:', !!accessToken)
 
+        // First, let's check what forms are available for this site
+        console.log('Checking available forms for site:', siteId)
+        const formsResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/forms`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (!formsResponse.ok)
+        {
+            const errorText = await formsResponse.text()
+            console.error('Forms API error response:', errorText)
+            throw new Error(`Failed to fetch forms list: ${formsResponse.status} ${formsResponse.statusText}`)
+        }
+
+        const formsData = await formsResponse.json()
+        console.log('Available forms:', formsData)
+
+        // Find the correct form name
+        const targetForm = formsData.find(form =>
+            form.name === 'customer-lead' ||
+            form.name === 'contact-lead' ||
+            form.name.includes('lead') ||
+            form.name.includes('contact')
+        )
+
+        if (!targetForm)
+        {
+            console.log('No matching form found. Available forms:', formsData.map(f => f.name))
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({
+                    submissions: [],
+                    count: 0,
+                    message: 'No matching form found',
+                    availableForms: formsData.map(f => f.name)
+                })
+            }
+        }
+
+        console.log('Using form:', targetForm.name, 'with ID:', targetForm.id)
+
         // Fetch form submissions from Netlify Forms API
-        console.log('Fetching from API:', `https://api.netlify.com/api/v1/sites/${siteId}/forms/customer-lead/submissions`)
-        const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/forms/customer-lead/submissions`, {
+        console.log('Fetching from API:', `https://api.netlify.com/api/v1/sites/${siteId}/forms/${targetForm.id}/submissions`)
+        const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/forms/${targetForm.id}/submissions`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
