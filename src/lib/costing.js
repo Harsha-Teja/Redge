@@ -287,17 +287,32 @@ export async function calculateAllSolutions(inputs)
     const storageGB = (parseFloat(inputs.storageTB) || 10) * 1024 * 1024 // Convert TB to GB
     const egressGB = storageGB * config.defaults.egressAsStoragePct
 
-    // Growth ramp based on form inputs
+    // Growth ramp based on form inputs - ensure we have 5 years
     const growthRamp = [
-        (parseFloat(inputs.growth12Month) || 0) / 100,
-        (parseFloat(inputs.growth24Month) || 0) / 100,
-        (parseFloat(inputs.growth36Month) || 0) / 100
-    ].map(growth => Math.max(config.defaults.minCapacityPct, 1 + growth))
+        Math.max(config.defaults.minCapacityPct, 1 + (parseFloat(inputs.growth12Month) || 0) / 100), // Year 1
+        Math.max(config.defaults.minCapacityPct, 1 + (parseFloat(inputs.growth24Month) || 0) / 100), // Year 2
+        Math.max(config.defaults.minCapacityPct, 1 + (parseFloat(inputs.growth36Month) || 0) / 100), // Year 3
+        Math.max(config.defaults.minCapacityPct, 1 + (parseFloat(inputs.growth36Month) || 0) / 100), // Year 4 (same as year 3)
+        Math.max(config.defaults.minCapacityPct, 1 + (parseFloat(inputs.growth36Month) || 0) / 100)  // Year 5 (same as year 3)
+    ]
 
     // Calculate all solutions
     const onPrem = await onPremTotals(itKW, growthRamp, pue, energyPrice, config)
     const colo = await coloTotals(itKW, growthRamp, pue, energyPrice, bandwidthGbps, config)
     const cloud = await cloudTotals(storageGB, egressGB, bandwidthGbps, growthRamp, config)
+
+    // Calculate costs for 1, 3, and 5 years
+    const onPrem1Year = onPrem.yearlyCosts[0]?.yearTotal || 0
+    const onPrem3Year = onPrem.yearlyCosts.slice(0, 3).reduce((sum, year) => sum + (year.yearTotal || 0), 0)
+    const onPrem5Year = onPrem.totalCost || 0
+
+    const colo1Year = colo.yearlyCosts[0]?.yearTotal || 0
+    const colo3Year = colo.yearlyCosts.slice(0, 3).reduce((sum, year) => sum + (year.yearTotal || 0), 0)
+    const colo5Year = colo.totalCost || 0
+
+    const cloud1Year = cloud.yearlyCosts[0]?.yearTotal || 0
+    const cloud3Year = cloud.yearlyCosts.slice(0, 3).reduce((sum, year) => sum + (year.yearTotal || 0), 0)
+    const cloud5Year = cloud.totalCost || 0
 
     // Get the last year's data for display (most recent year)
     const lastYearIndex = onPrem.yearlyCosts.length - 1
@@ -307,7 +322,12 @@ export async function calculateAllSolutions(inputs)
 
     return {
         onPremises: {
-            total: Math.round(onPrem.totalCost),
+            total: Math.round(onPrem5Year),
+            yearly: {
+                '1 Year': Math.round(onPrem1Year),
+                '3 Years': Math.round(onPrem3Year),
+                '5 Years': Math.round(onPrem5Year)
+            },
             details: {
                 'Facility & Energy': Math.round((onPremLastYear.energyCost || 0) + (onPremLastYear.annuity || 0)),
                 'Staffing': Math.round(onPremLastYear.staffing || 0),
@@ -318,7 +338,12 @@ export async function calculateAllSolutions(inputs)
             }
         },
         colocation: {
-            total: Math.round(colo.totalCost),
+            total: Math.round(colo5Year),
+            yearly: {
+                '1 Year': Math.round(colo1Year),
+                '3 Years': Math.round(colo3Year),
+                '5 Years': Math.round(colo5Year)
+            },
             details: {
                 'Rack Space': Math.round(coloLastYear.base || 0),
                 'Power & Cooling': Math.round(coloLastYear.energyCost || 0),
@@ -329,7 +354,12 @@ export async function calculateAllSolutions(inputs)
             }
         },
         publicCloud: {
-            total: Math.round(cloud.totalCost),
+            total: Math.round(cloud5Year),
+            yearly: {
+                '1 Year': Math.round(cloud1Year),
+                '3 Years': Math.round(cloud3Year),
+                '5 Years': Math.round(cloud5Year)
+            },
             details: {
                 'Compute Instances': Math.round(cloudLastYear.compute || 0),
                 'Storage': Math.round(cloudLastYear.storage || 0),

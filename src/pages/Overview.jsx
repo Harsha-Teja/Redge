@@ -1714,9 +1714,28 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">On-premises</h3>
-                                    <div className="text-4xl font-bold" style={{ color: ESB_BLUE }}>
-                                        €{results.onPremises.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">On-premises</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1749,9 +1768,28 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Colocation</h3>
-                                    <div className="text-4xl font-bold" style={{ color: EMERALD_GREEN }}>
-                                        €{results.colocation.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Colocation</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1784,9 +1822,28 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Public Cloud</h3>
-                                    <div className="text-4xl font-bold text-gray-600">
-                                        €{results.publicCloud.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Public Cloud</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
