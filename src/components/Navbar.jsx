@@ -235,7 +235,7 @@ export default function Navbar()
                                 </a>
                             </div>
 
-                            <form name="contact-form" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
+                            <form name="contact-form" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
                                 <input type="hidden" name="form-name" value="contact-form" />
                                 <div style={{ display: 'none' }}>
                                     <label>Don't fill this out if you're human: <input name="bot-field" /></label>
