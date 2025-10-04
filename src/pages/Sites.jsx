@@ -2,11 +2,77 @@
  * Sites page for ReDge - Data center sites and locations
  * Shows information about various data center sites across Ireland
  * Protected by passcode authentication
+ * Displays contact-lead form submissions in a table format
  */
+import { useState, useEffect } from 'react'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
 
 function Sites()
 {
+    // State for managing form submissions data
+    const [formSubmissions, setFormSubmissions] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    /**
+     * Fetches contact-lead form submissions from Netlify Forms API
+     * This function retrieves all form submissions for the 'customer-lead' form
+     */
+    const fetchFormSubmissions = async () =>
+    {
+        try
+        {
+            setLoading(true)
+            setError(null)
+
+            console.log('Fetching form submissions from:', '/.netlify/functions/get-form-submissions')
+            const response = await fetch('/.netlify/functions/get-form-submissions')
+
+            console.log('Response status:', response.status)
+            console.log('Response headers:', response.headers)
+
+            if (!response.ok)
+            {
+                const errorText = await response.text()
+                console.error('Response error text:', errorText)
+                throw new Error(`Failed to fetch form submissions: ${response.status} ${response.statusText}`)
+            }
+
+            const data = await response.json()
+            console.log('Response data:', data)
+            setFormSubmissions(data.submissions || [])
+        } catch (err)
+        {
+            console.error('Error fetching form submissions:', err)
+            setError(`Failed to load form submissions: ${err.message}`)
+        } finally
+        {
+            setLoading(false)
+        }
+    }
+
+    // Fetch form submissions when component mounts
+    useEffect(() =>
+    {
+        fetchFormSubmissions()
+    }, [])
+
+    /**
+     * Formats a date string to a readable format
+     * @param {string} dateString - ISO date string
+     * @returns {string} Formatted date string
+     */
+    const formatDate = (dateString) =>
+    {
+        return new Date(dateString).toLocaleDateString('en-IE', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
+
     return (
         <PasscodeProtection
             correctPasscode="harsha@esb.ie"
@@ -24,6 +90,106 @@ function Sites()
                             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                                 Explore our network of modular data center sites across Ireland, designed for optimal performance and sustainability.
                             </p>
+                        </div>
+
+                        {/* Contact Lead Form Submissions Table */}
+                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900">Contact Lead Submissions</h2>
+                                <button
+                                    onClick={fetchFormSubmissions}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                >
+                                    Refresh
+                                </button>
+                            </div>
+
+                            {loading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <span className="ml-3 text-gray-600">Loading form submissions...</span>
+                                </div>
+                            ) : error ? (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                    <p className="text-red-600">{error}</p>
+                                    <button
+                                        onClick={fetchFormSubmissions}
+                                        className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
+                            ) : formSubmissions.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>No form submissions found.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Company
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Contact
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Sector
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Location
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    IT Load (kW)
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Contract Term
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Submitted
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {formSubmissions.map((submission) => (
+                                                <tr key={submission.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {submission.companyName}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">
+                                                            {submission.role}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-900">
+                                                            {submission.email}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                            {submission.sector}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {submission.location}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {submission.currentITLoad}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {submission.contractTerm}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {formatDate(submission.submittedAt)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
 
                         {/* Sites Grid */}
