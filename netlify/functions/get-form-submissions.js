@@ -72,6 +72,7 @@ exports.handler = async (event, context) =>
 
         const formsData = await formsResponse.json()
         console.log('Available forms:', formsData)
+        console.log('Number of forms found:', formsData.length)
 
         // Find the correct form name
         const targetForm = formsData.find(form =>
@@ -91,12 +92,22 @@ exports.handler = async (event, context) =>
                     submissions: [],
                     count: 0,
                     message: 'No matching form found',
-                    availableForms: formsData.map(f => f.name)
+                    availableForms: formsData.map(f => f.name),
+                    debugInfo: {
+                        totalForms: formsData.length,
+                        searchedFor: ['customer-lead', 'contact-lead', 'forms containing "lead" or "contact"']
+                    }
                 })
             }
         }
 
         console.log('Using form:', targetForm.name, 'with ID:', targetForm.id)
+        console.log('Form details:', {
+            name: targetForm.name,
+            id: targetForm.id,
+            submission_count: targetForm.submission_count,
+            created_at: targetForm.created_at
+        })
 
         // Fetch form submissions from Netlify Forms API
         console.log('Fetching from API:', `https://api.netlify.com/api/v1/sites/${siteId}/forms/${targetForm.id}/submissions`)
@@ -120,6 +131,7 @@ exports.handler = async (event, context) =>
 
         const data = await response.json()
         console.log('API response data:', data)
+        console.log('Number of submissions found:', data.length)
 
         // Transform the data to match our expected format
         const submissions = data.map((submission, index) => ({
