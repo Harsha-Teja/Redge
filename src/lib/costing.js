@@ -299,38 +299,44 @@ export async function calculateAllSolutions(inputs)
     const colo = await coloTotals(itKW, growthRamp, pue, energyPrice, bandwidthGbps, config)
     const cloud = await cloudTotals(storageGB, egressGB, bandwidthGbps, growthRamp, config)
 
+    // Get the last year's data for display (most recent year)
+    const lastYearIndex = onPrem.yearlyCosts.length - 1
+    const onPremLastYear = onPrem.yearlyCosts[lastYearIndex]
+    const coloLastYear = colo.yearlyCosts[lastYearIndex]
+    const cloudLastYear = cloud.yearlyCosts[lastYearIndex]
+
     return {
         onPremises: {
             total: Math.round(onPrem.totalCost),
             details: {
-                'Facility & Energy': Math.round(onPrem.yearlyCosts[2].energyCost + onPrem.yearlyCosts[2].annuity),
-                'Staffing': Math.round(onPrem.yearlyCosts[2].staffing),
-                'Maintenance': Math.round(onPrem.yearlyCosts[2].maint),
-                'Insurance': Math.round(onPrem.yearlyCosts[2].insurance),
-                'Compliance': Math.round(onPrem.yearlyCosts[2].annuity * 0.1), // Estimate
-                'Connectivity': Math.round(onPrem.yearlyCosts[2].annuity * 0.05) // Estimate
+                'Facility & Energy': Math.round((onPremLastYear.energyCost || 0) + (onPremLastYear.annuity || 0)),
+                'Staffing': Math.round(onPremLastYear.staffing || 0),
+                'Maintenance': Math.round(onPremLastYear.maint || 0),
+                'Insurance': Math.round(onPremLastYear.insurance || 0),
+                'Compliance': Math.round((onPremLastYear.annuity || 0) * 0.1), // Estimate
+                'Connectivity': Math.round((onPremLastYear.annuity || 0) * 0.05) // Estimate
             }
         },
         colocation: {
             total: Math.round(colo.totalCost),
             details: {
-                'Rack Space': Math.round(colo.yearlyCosts[2].base),
-                'Power & Cooling': Math.round(colo.yearlyCosts[2].energyCost),
-                'Connectivity': Math.round(colo.yearlyCosts[2].bandwidth + colo.yearlyCosts[2].xConnect),
-                'Management': Math.round(colo.yearlyCosts[2].compliance),
-                'Compliance': Math.round(colo.yearlyCosts[2].compliance * 0.5), // Estimate
-                'Setup': Math.round(colo.yearlyCosts[2].base * 0.1) // Estimate
+                'Rack Space': Math.round(coloLastYear.base || 0),
+                'Power & Cooling': Math.round(coloLastYear.energyCost || 0),
+                'Connectivity': Math.round((coloLastYear.bandwidth || 0) + (coloLastYear.xConnect || 0)),
+                'Management': Math.round(coloLastYear.compliance || 0),
+                'Compliance': Math.round((coloLastYear.compliance || 0) * 0.5), // Estimate
+                'Setup': Math.round((coloLastYear.base || 0) * 0.1) // Estimate
             }
         },
         publicCloud: {
             total: Math.round(cloud.totalCost),
             details: {
-                'Compute Instances': Math.round(cloud.yearlyCosts[2].compute),
-                'Storage': Math.round(cloud.yearlyCosts[2].storage),
-                'Network': Math.round(cloud.yearlyCosts[2].egress + cloud.yearlyCosts[2].interconnect),
-                'Management': Math.round(cloud.yearlyCosts[2].support),
-                'Data Transfer': Math.round(cloud.yearlyCosts[2].egress),
-                'Support': Math.round(cloud.yearlyCosts[2].support * 0.5) // Estimate
+                'Compute Instances': Math.round(cloudLastYear.compute || 0),
+                'Storage': Math.round(cloudLastYear.storage || 0),
+                'Network': Math.round((cloudLastYear.egress || 0) + (cloudLastYear.interconnect || 0)),
+                'Management': Math.round(cloudLastYear.support || 0),
+                'Data Transfer': Math.round(cloudLastYear.egress || 0),
+                'Support': Math.round((cloudLastYear.support || 0) * 0.5) // Estimate
             }
         }
     }

@@ -1720,31 +1720,25 @@ export default function Overview()
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('onPremises')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'onPremises' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'onPremises' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.onPremises.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.onPremises.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-blue-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-blue-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Facility & Energy' && 'Energy costs + facility depreciation over 5 years'}
+                                                {key === 'Staffing' && 'Annual cost for dedicated facility staff (engineers, operators)'}
+                                                {key === 'Maintenance' && 'Annual maintenance cost as percentage of build cost'}
+                                                {key === 'Insurance' && 'Annual insurance cost for facility and equipment'}
+                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
+                                                {key === 'Connectivity' && 'Estimated network and connectivity costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Colocation Card */}
@@ -1761,31 +1755,25 @@ export default function Overview()
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('colocation')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'colocation' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'colocation' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.colocation.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.colocation.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-green-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-green-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Rack Space' && 'Monthly cost per kW of IT load for rack space and power'}
+                                                {key === 'Power & Cooling' && 'Energy costs passed through from colocation provider'}
+                                                {key === 'Connectivity' && 'Bandwidth costs + cross-connect to carrier networks'}
+                                                {key === 'Management' && 'Compliance overhead as percentage of base colo cost'}
+                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
+                                                {key === 'Setup' && 'Estimated initial setup and migration costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Public Cloud Card */}
@@ -1802,31 +1790,25 @@ export default function Overview()
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('publicCloud')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'publicCloud' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'publicCloud' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.publicCloud.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.publicCloud.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-gray-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-gray-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Compute Instances' && 'Base monthly cost for compute instances and processing power'}
+                                                {key === 'Storage' && 'Monthly cost per GB of data storage'}
+                                                {key === 'Network' && 'Data egress costs + dedicated interconnect fees'}
+                                                {key === 'Management' && 'Support cost as percentage of compute + storage + egress'}
+                                                {key === 'Data Transfer' && 'Cost per GB of data transferred out of cloud'}
+                                                {key === 'Support' && 'Estimated additional support and management costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
