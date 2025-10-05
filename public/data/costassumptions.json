@@ -1,0 +1,66 @@
+{
+    "onprem": {
+        "capexPerKW": 15000,
+        "softCostsPct": 0.25,
+        "maintPct": 0.03,
+        "staffingPerYr": 120000,
+        "insurancePerYr": 15000,
+        "waccPct": 0.08,
+        "depreciationYears": 5,
+        "hoursPerYear": 8760,
+        "energyConversionFactor": 1000
+    },
+    "colo": {
+        "euroPerKWMonth": 800,
+        "crossConnectPerMonth": 200,
+        "bandwidthPerGbpsMonth": 50,
+        "passThroughEnergy": true,
+        "compliancePct": 0.15
+    },
+    "cloud": {
+        "computePerMonth": 5000,
+        "storageEuroPerGBMo": 0.02,
+        "egressEuroPerGB": 0.05,
+        "interconnectPerMonth": 300,
+        "supportPct": 0.20
+    },
+    "defaults": {
+        "pue": 1.5,
+        "energyPrice": 80,
+        "minCapacityPct": 0.1,
+        "egressAsStoragePct": 0.1
+    },
+    "assumptions": {
+        "onprem": {
+            "capexPerKW": "Capital expenditure per kW of IT load for facility build-out",
+            "softCostsPct": "Percentage of hard costs for permits, design, project management",
+            "maintPct": "Annual maintenance cost as percentage of total build cost",
+            "staffingPerYr": "Annual cost for dedicated facility staff (engineers, operators)",
+            "insurancePerYr": "Annual insurance cost for facility and equipment",
+            "waccPct": "Weighted Average Cost of Capital for annuity calculations",
+            "depreciationYears": "Number of years for equipment depreciation",
+            "hoursPerYear": "Hours in a year for energy calculations",
+            "energyConversionFactor": "Conversion factor from kW to MWh (kW*hours/1000)"
+        },
+        "colo": {
+            "euroPerKWMonth": "Monthly cost per kW of IT load for rack space and power",
+            "crossConnectPerMonth": "Monthly cost for cross-connect to carrier networks",
+            "bandwidthPerGbpsMonth": "Monthly cost per Gbps of internet bandwidth",
+            "passThroughEnergy": "Whether energy costs are passed through to customer",
+            "compliancePct": "Compliance overhead as percentage of base colo cost"
+        },
+        "cloud": {
+            "computePerMonth": "Base monthly cost for compute instances",
+            "storageEuroPerGBMo": "Monthly cost per GB of storage",
+            "egressEuroPerGB": "Cost per GB of data egress from cloud",
+            "interconnectPerMonth": "Monthly cost for dedicated interconnect",
+            "supportPct": "Support cost as percentage of compute + storage + egress"
+        },
+        "defaults": {
+            "pue": "Power Usage Effectiveness - ratio of total facility power to IT power",
+            "energyPrice": "Energy price in euros per MWh",
+            "minCapacityPct": "Minimum capacity percentage to ensure realistic scaling",
+            "egressAsStoragePct": "Percentage of storage assumed to be egressed monthly"
+        }
+    }
+}

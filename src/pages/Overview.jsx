@@ -8,6 +8,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import { calculateAllSolutions } from '../lib/costing'
+import { submitFormToSupabase, submitSurveyToSupabase } from '../lib/supabase.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 // Using inline SVG icons instead of external package
@@ -84,6 +86,15 @@ const DATA_CENTRE_SERVICES = [
 
 export default function Overview()
 {
+    // Wind farm data state
+    const [windFarmData, setWindFarmData] = useState([])
+    const [isLoadingWindFarms, setIsLoadingWindFarms] = useState(true)
+
+    // Energy data state
+    const [energyDemandData, setEnergyDemandData] = useState([])
+    const [energyGenerationData, setEnergyGenerationData] = useState([])
+    const [isLoadingEnergyData, setIsLoadingEnergyData] = useState(true)
+
     const [formData, setFormData] = useState({
         // Company Information
         companyName: '',
@@ -190,6 +201,111 @@ export default function Overview()
             .catch(error => console.error('Error loading locations:', error))
     }, [])
 
+    // Load wind farm data from windfarms.geojson
+    useEffect(() =>
+    {
+        const loadWindFarmData = async () =>
+        {
+            try
+            {
+                const response = await fetch('/data/windfarms.geojson')
+                if (response.ok)
+                {
+                    const data = await response.json()
+                    // Parse the wind farm data - data comes as objects with numeric keys
+                    const windFarms = []
+                    const windFarmNames = data.Windfarm_Name
+                    const counties = data.County
+                    const capacities = data.MEC__MW_
+                    const latitudes = data.lat
+                    const longitudes = data.lon
+
+                    // Get the number of wind farms from the first property
+                    const numWindFarms = Object.keys(windFarmNames).length
+
+                    for (let i = 0; i < numWindFarms; i++)
+                    {
+                        windFarms.push({
+                            name: windFarmNames[i],
+                            county: counties[i],
+                            capacity: capacities[i],
+                            lat: latitudes[i],
+                            lon: longitudes[i]
+                        })
+                    }
+                    setWindFarmData(windFarms)
+                    setIsLoadingWindFarms(false)
+                } else
+                {
+                    console.error('Failed to load wind farm data')
+                    setIsLoadingWindFarms(false)
+                }
+            } catch (error)
+            {
+                console.error('Error loading wind farm data:', error)
+                setIsLoadingWindFarms(false)
+            }
+        }
+
+        loadWindFarmData()
+    }, [])
+
+    // Load energy demand and generation data
+    useEffect(() =>
+    {
+        const loadEnergyData = async () =>
+        {
+            try
+            {
+                // Load energy demand data
+                const demandResponse = await fetch('/data/energy_demand.geojson')
+                if (demandResponse.ok)
+                {
+                    const demandData = await demandResponse.json()
+                    const demandFeatures = demandData.features.map(feature => ({
+                        name: feature.properties.Station_Name,
+                        transformerGroup: feature.properties.Transformer_GroupID,
+                        voltageClass: feature.properties.Voltage_Class,
+                        primaryKv: feature.properties.Primary_kV,
+                        installedCapacity: feature.properties.Installed_Capacity_MVA,
+                        demandFirmCapacity: feature.properties.Demand_FirmCapacity_MVA,
+                        demandAvailable: feature.properties.Demand_Available_MVA,
+                        lat: feature.properties.Latitude,
+                        lon: feature.properties.Longitude
+                    }))
+                    setEnergyDemandData(demandFeatures)
+                }
+
+                // Load energy generation data
+                const generationResponse = await fetch('/data/energy_generation.geojson')
+                if (generationResponse.ok)
+                {
+                    const generationData = await generationResponse.json()
+                    const generationFeatures = generationData.features.map(feature => ({
+                        name: feature.properties.Station_Name,
+                        transformerGroup: feature.properties.Transformer_GroupID,
+                        voltageClass: feature.properties.Voltage_Class,
+                        primaryKv: feature.properties.Primary_kV,
+                        installedCapacity: feature.properties.Installed_Capacity_MVA,
+                        genAvailableFirm: feature.properties.Gen_Available_Firm_MW,
+                        genAvailableNonFirm: feature.properties.Gen_Available_NonFirm_MW,
+                        lat: feature.properties.Latitude,
+                        lon: feature.properties.Longitude
+                    }))
+                    setEnergyGenerationData(generationFeatures)
+                }
+
+                setIsLoadingEnergyData(false)
+            } catch (error)
+            {
+                console.error('Error loading energy data:', error)
+                setIsLoadingEnergyData(false)
+            }
+        }
+
+        loadEnergyData()
+    }, [])
+
     // Close dropdown when clicking outside
     useEffect(() =>
     {
@@ -284,6 +400,106 @@ export default function Overview()
         } catch (error)
         {
             // Fallback to default marker if custom marker fails
+            return new L.Icon.Default()
+        }
+    }
+
+    // Create wind farm icon
+    function createWindFarmIcon(capacity)
+    {
+        try
+        {
+            const size = Math.max(12, Math.min(24, capacity / 10)) // Scale icon size based on capacity
+            const windFarmIcon = L.divIcon({
+                className: 'wind-farm-icon',
+                html: `<div style="
+                    background-color: #10B981;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: ${Math.max(8, size - 4)}px;
+                ">🌬️</div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                popupAnchor: [0, -size / 2]
+            })
+            return windFarmIcon
+        } catch (error)
+        {
+            // Fallback to default marker if custom marker fails
+            return new L.Icon.Default()
+        }
+    }
+
+    // Create energy demand icon
+    function createEnergyDemandIcon(capacity)
+    {
+        try
+        {
+            const size = Math.max(10, Math.min(20, capacity / 5)) // Scale icon size based on capacity
+            const demandIcon = L.divIcon({
+                className: 'energy-demand-icon',
+                html: `<div style="
+                    background-color: #EF4444;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: ${Math.max(6, size - 4)}px;
+                ">⚡</div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                popupAnchor: [0, -size / 2]
+            })
+            return demandIcon
+        } catch (error)
+        {
+            return new L.Icon.Default()
+        }
+    }
+
+    // Create energy generation icon
+    function createEnergyGenerationIcon(capacity)
+    {
+        try
+        {
+            const size = Math.max(10, Math.min(20, capacity / 5)) // Scale icon size based on capacity
+            const generationIcon = L.divIcon({
+                className: 'energy-generation-icon',
+                html: `<div style="
+                    background-color: #3B82F6;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: ${Math.max(6, size - 4)}px;
+                ">🔋</div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                popupAnchor: [0, -size / 2]
+            })
+            return generationIcon
+        } catch (error)
+        {
             return new L.Icon.Default()
         }
     }
@@ -416,34 +632,53 @@ export default function Overview()
      */
     const handleSurveySubmit = async (e) =>
     {
+        e.preventDefault()
+
         // Check if already submitted
         if (hasSubmittedSurvey)
         {
-            e.preventDefault()
             alert('You have already submitted the survey. Thank you for your submission!')
             closeSurveyModal()
             return
         }
 
-        // Don't prevent default - let Netlify handle the form submission
+        try
+        {
+            console.log('Submitting survey form to Supabase:', surveyData)
 
-        // Store in localStorage
-        const submissionData = {
-            ...surveyData,
-            timestamp: new Date().toISOString()
+            const result = await submitSurveyToSupabase(surveyData)
+
+            if (result.success)
+            {
+                console.log('Survey form submitted successfully:', result.data)
+
+                // Store in localStorage for local tracking
+                const submissionData = {
+                    ...surveyData,
+                    timestamp: new Date().toISOString()
+                }
+                localStorage.setItem('redge_advanced_survey', JSON.stringify(submissionData))
+
+                // Mark survey as submitted
+                localStorage.setItem('redge_survey_submitted', 'true')
+                setHasSubmittedSurvey(true)
+
+                // Show toast
+                setShowToast(true)
+                setTimeout(() => setShowToast(false), 3000)
+
+                // Close modal
+                closeSurveyModal()
+            } else
+            {
+                console.error('Error submitting survey form:', result.error)
+                alert('Sorry, there was an error submitting your survey. Please try again.')
+            }
+        } catch (error)
+        {
+            console.error('Error submitting survey form:', error)
+            alert('Sorry, there was an error submitting your survey. Please try again.')
         }
-        localStorage.setItem('redge_advanced_survey', JSON.stringify(submissionData))
-
-        // Mark survey as submitted
-        localStorage.setItem('redge_survey_submitted', 'true')
-        setHasSubmittedSurvey(true)
-
-        // Show toast
-        setShowToast(true)
-        setTimeout(() => setShowToast(false), 3000)
-
-        // Close modal
-        closeSurveyModal()
     }
 
     /**
@@ -459,74 +694,172 @@ export default function Overview()
     }, [showToast])
 
     /**
+     * Validate form fields
+     */
+    function validateForm()
+    {
+        const requiredFields = [
+            'companyName',
+            'email',
+            'role',
+            'eircode',
+            'sector',
+            'dataSovereignty',
+            'compliance',
+            'latencyTolerance',
+            'availabilityTier',
+            'currentITLoad',
+            'currentRacks',
+            'currentDensity',
+            'growth12Month',
+            'growth24Month',
+            'growth36Month',
+            'gpuAIShare',
+            'storageTB',
+            'storageGrowthRate',
+            'bandwidthGbps',
+            'preferredCarriers',
+            'renewableTarget',
+            'contractTerm',
+            'dataCentreService',
+            'utilisationRamp',
+            'earliestServiceDate',
+            'micLimit',
+            'existingLoad'
+        ]
+
+        for (const field of requiredFields)
+        {
+            if (!formData[field] || formData[field].toString().trim() === '')
+            {
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
      * Handle form submission and calculation
      */
     async function handleSubmit(e)
     {
+        // Always prevent default form submission
+        e.preventDefault()
+
         // Check if already submitted
         if (hasSubmittedMainForm)
         {
-            e.preventDefault()
             alert('You have already submitted the main form. Thank you for your submission!')
+            return
+        }
+
+        // Validate form before submission
+        if (!validateForm())
+        {
+            alert('Please fill in all required fields before calculating costs.')
             return
         }
 
         // Debug: Log form data
         console.log('Form submitting with data:', formData)
 
-        // Don't prevent default - let Netlify handle the form submission
-
         setIsCalculating(true)
 
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 2000))
 
-        // Mock calculation results
-        const mockResults = {
-            onPremises: {
-                total: 285000,
-                details: {
-                    'Electricity': 45000,
-                    'Staffing': 120000,
-                    'Compliance': 25000,
-                    'Connectivity': 15000,
-                    'Hardware': 60000,
-                    'Maintenance': 20000
-                }
-            },
-            colocation: {
-                total: 195000,
-                details: {
-                    'Rack Space': 80000,
-                    'Power & Cooling': 35000,
-                    'Connectivity': 25000,
-                    'Management': 30000,
-                    'Compliance': 15000,
-                    'Setup': 10000
-                }
-            },
-            publicCloud: {
-                total: 165000,
-                details: {
-                    'Compute Instances': 70000,
-                    'Storage': 25000,
-                    'Network': 15000,
-                    'Management': 20000,
-                    'Data Transfer': 10000,
-                    'Support': 25000
+        // Calculate real results using the costing library
+        console.log('Starting calculations...')
+        let calculatedResults
+        try
+        {
+            calculatedResults = await calculateAllSolutions(formData)
+            console.log('Calculations completed:', calculatedResults)
+        } catch (error)
+        {
+            console.error('Error in calculations:', error)
+            // Fallback to mock results if calculation fails
+            calculatedResults = {
+                onPremises: {
+                    total: 285000,
+                    details: {
+                        'Facility & Energy': 45000,
+                        'Staffing': 120000,
+                        'Maintenance': 25000,
+                        'Insurance': 15000,
+                        'Compliance': 20000,
+                        'Connectivity': 10000
+                    }
+                },
+                colocation: {
+                    total: 195000,
+                    details: {
+                        'Rack Space': 80000,
+                        'Power & Cooling': 35000,
+                        'Connectivity': 25000,
+                        'Management': 30000,
+                        'Compliance': 15000,
+                        'Setup': 10000
+                    }
+                },
+                publicCloud: {
+                    total: 165000,
+                    details: {
+                        'Compute Instances': 70000,
+                        'Storage': 25000,
+                        'Network': 15000,
+                        'Management': 20000,
+                        'Data Transfer': 10000,
+                        'Support': 25000
+                    }
                 }
             }
+            console.log('Using fallback results:', calculatedResults)
+        }
+
+        // Submit form data to Supabase (in background)
+        const supabaseSuccess = await submitToSupabase(formData)
+        if (!supabaseSuccess)
+        {
+            console.warn('Form submission to Supabase failed, but calculations will continue')
         }
 
         // Mark form as submitted
         localStorage.setItem('redge_main_form_submitted', 'true')
         setHasSubmittedMainForm(true)
 
-        setResults(mockResults)
+        console.log('Setting results:', calculatedResults)
+        setResults(calculatedResults)
         setIsCalculating(false)
 
         // Scroll to results section
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    /**
+     * Submit form data to Supabase
+     */
+    async function submitToSupabase(formData)
+    {
+        try
+        {
+            console.log('Submitting form data to Supabase...')
+            const result = await submitFormToSupabase(formData)
+
+            if (result.success)
+            {
+                console.log('Form data submitted to Supabase successfully:', result.data)
+                return true
+            } else
+            {
+                console.error('Error submitting to Supabase:', result.error)
+                return false
+            }
+        } catch (error)
+        {
+            console.error('Error submitting to Supabase:', error)
+            return false
+        }
     }
 
     /**
@@ -588,6 +921,19 @@ export default function Overview()
                         {/* Map Container */}
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 relative z-0">
                             <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Ireland Map</h3>
+                            {isLoadingWindFarms && (
+                                <div className="text-center text-sm text-gray-500 mb-2">Loading wind farms...</div>
+                            )}
+                            {/* {!isLoadingWindFarms && windFarmData.length > 0 && (
+                                <div className="text-center text-sm text-green-600 mb-2">
+                                    {windFarmData.length} wind farms loaded
+                                </div>
+                            )} */}
+                            {!isLoadingWindFarms && windFarmData.length === 0 && (
+                                <div className="text-center text-sm text-red-600 mb-2">
+                                    No wind farm data loaded
+                                </div>
+                            )}
                             <div className="w-full rounded-lg border border-gray-200 shadow-inner overflow-hidden relative z-0">
                                 <MapContainer
                                     center={[53.4, -7.9]}
@@ -622,6 +968,88 @@ export default function Overview()
                                             </Popup>
                                         </Marker>
                                     )}
+                                    {/* Wind Farm Markers */}
+                                    {!isLoadingWindFarms && windFarmData.length > 0 && (
+                                        <>
+                                            {windFarmData.slice(0, 20).map((windFarm, index) => (
+                                                <Marker
+                                                    key={index}
+                                                    position={[windFarm.lat, windFarm.lon]}
+                                                    icon={createWindFarmIcon(windFarm.capacity)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">🌬️</span>
+                                                                <b className="text-green-700">{windFarm.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>County:</strong> {windFarm.county}</div>
+                                                                <div><strong>Capacity:</strong> {windFarm.capacity} MW</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Energy Demand Markers */}
+                                    {!isLoadingEnergyData && energyDemandData.length > 0 && (
+                                        <>
+                                            {energyDemandData.slice(0, 15).map((demand, index) => (
+                                                <Marker
+                                                    key={`demand-${index}`}
+                                                    position={[demand.lat, demand.lon]}
+                                                    icon={createEnergyDemandIcon(parseFloat(demand.demandAvailable) || 0)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">⚡</span>
+                                                                <b className="text-red-700">{demand.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>Voltage:</strong> {demand.primaryKv}</div>
+                                                                <div><strong>Class:</strong> {demand.voltageClass}</div>
+                                                                <div><strong>Installed Capacity:</strong> {demand.installedCapacity} MVA</div>
+                                                                <div><strong>Demand Available:</strong> {demand.demandAvailable} MVA</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Energy Generation Markers */}
+                                    {!isLoadingEnergyData && energyGenerationData.length > 0 && (
+                                        <>
+                                            {energyGenerationData.slice(0, 15).map((generation, index) => (
+                                                <Marker
+                                                    key={`generation-${index}`}
+                                                    position={[generation.lat, generation.lon]}
+                                                    icon={createEnergyGenerationIcon(parseFloat(generation.genAvailableFirm) || 0)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">🔋</span>
+                                                                <b className="text-blue-700">{generation.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>Voltage:</strong> {generation.primaryKv}</div>
+                                                                <div><strong>Class:</strong> {generation.voltageClass}</div>
+                                                                <div><strong>Installed Capacity:</strong> {generation.installedCapacity} MVA</div>
+                                                                <div><strong>Firm Generation:</strong> {generation.genAvailableFirm} MW</div>
+                                                                <div><strong>Non-Firm Generation:</strong> {generation.genAvailableNonFirm} MW</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
                                 </MapContainer>
                             </div>
                         </div>
@@ -630,11 +1058,7 @@ export default function Overview()
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Your Requirements</h3>
 
-                            <form name="customer-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-6">
-                                <input type="hidden" name="form-name" value="customer-lead" />
-                                <div style={{ display: 'none' }}>
-                                    <label>Don't fill this out if you're human: <input name="bot-field" /></label>
-                                </div>
+                            <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Company Information Section */}
                                 <div className="space-y-4">
                                     <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-1">
@@ -1571,71 +1995,19 @@ export default function Overview()
                                 {/* Submit Button */}
                                 <button
                                     type="submit"
-                                    onClick={() =>
-                                    {
-                                        // Show loading state
-                                        setIsCalculating(true)
-
-                                        // Simulate calculation and show results
-                                        setTimeout(() =>
-                                        {
-                                            const mockResults = {
-                                                onPremises: {
-                                                    total: 285000,
-                                                    details: {
-                                                        'Electricity': 45000,
-                                                        'Staffing': 120000,
-                                                        'Compliance': 25000,
-                                                        'Connectivity': 15000,
-                                                        'Hardware': 60000,
-                                                        'Maintenance': 20000
-                                                    }
-                                                },
-                                                colocation: {
-                                                    total: 195000,
-                                                    details: {
-                                                        'Rack Space': 80000,
-                                                        'Power & Cooling': 35000,
-                                                        'Connectivity': 25000,
-                                                        'Management': 30000,
-                                                        'Compliance': 15000,
-                                                        'Setup': 10000
-                                                    }
-                                                },
-                                                publicCloud: {
-                                                    total: 165000,
-                                                    details: {
-                                                        'Compute Instances': 70000,
-                                                        'Storage': 25000,
-                                                        'Network': 15000,
-                                                        'Management': 20000,
-                                                        'Data Transfer': 10000,
-                                                        'Support': 25000
-                                                    }
-                                                }
-                                            }
-
-                                            setResults(mockResults)
-                                            setIsCalculating(false)
-
-                                            // Scroll to results
-                                            setTimeout(() =>
-                                            {
-                                                const resultsSection = document.getElementById('results-section')
-                                                if (resultsSection)
-                                                {
-                                                    resultsSection.scrollIntoView({ behavior: 'smooth' })
-                                                }
-                                            }, 100)
-                                        }, 2000)
-                                    }}
-                                    className="w-full text-white py-3 px-4 rounded-lg font-semibold text-base transition-all duration-200 transform shadow-lg bg-blue-600 hover:bg-blue-700 hover:scale-105"
+                                    disabled={isCalculating || hasSubmittedMainForm}
+                                    className={`w-full text-white py-3 px-4 rounded-lg font-semibold text-base transition-all duration-200 transform shadow-lg ${hasSubmittedMainForm
+                                        ? 'bg-gray-500 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
+                                        }`}
                                 >
                                     {isCalculating ? (
                                         <div className="flex items-center justify-center">
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                                             Calculating...
                                         </div>
+                                    ) : hasSubmittedMainForm ? (
+                                        'Form Already Submitted ✓'
                                     ) : (
                                         'Calculate Costs'
                                     )}
@@ -1668,37 +2040,50 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">On-premises</h3>
-                                    <div className="text-4xl font-bold" style={{ color: ESB_BLUE }}>
-                                        €{results.onPremises.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">On-premises</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold" style={{ color: ESB_BLUE }}>
+                                                €{results.onPremises.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('onPremises')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'onPremises' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'onPremises' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.onPremises.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.onPremises.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-blue-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-blue-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Facility & Energy' && 'Energy costs + facility depreciation over 5 years'}
+                                                {key === 'Staffing' && 'Annual cost for dedicated facility staff (engineers, operators)'}
+                                                {key === 'Maintenance' && 'Annual maintenance cost as percentage of build cost'}
+                                                {key === 'Insurance' && 'Annual insurance cost for facility and equipment'}
+                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
+                                                {key === 'Connectivity' && 'Estimated network and connectivity costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Colocation Card */}
@@ -1709,37 +2094,50 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Colocation</h3>
-                                    <div className="text-4xl font-bold" style={{ color: EMERALD_GREEN }}>
-                                        €{results.colocation.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Colocation</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold" style={{ color: EMERALD_GREEN }}>
+                                                €{results.colocation.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('colocation')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'colocation' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'colocation' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.colocation.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.colocation.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-green-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-green-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Rack Space' && 'Monthly cost per kW of IT load for rack space and power'}
+                                                {key === 'Power & Cooling' && 'Energy costs passed through from colocation provider'}
+                                                {key === 'Connectivity' && 'Bandwidth costs + cross-connect to carrier networks'}
+                                                {key === 'Management' && 'Compliance overhead as percentage of base colo cost'}
+                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
+                                                {key === 'Setup' && 'Estimated initial setup and migration costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Public Cloud Card */}
@@ -1750,37 +2148,50 @@ export default function Overview()
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Public Cloud</h3>
-                                    <div className="text-4xl font-bold text-gray-600">
-                                        €{results.publicCloud.total.toLocaleString()}
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Public Cloud</h3>
+
+                                    {/* Yearly Cost Breakdown */}
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
+                                            <div className="text-lg font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['1 Year'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
+                                            <div className="text-lg font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['3 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
+                                            <div className="text-xl font-bold text-gray-600">
+                                                €{results.publicCloud.yearly['5 Years'].toLocaleString()}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleCard('publicCloud')}
-                                    className="w-full text-left text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                                >
-                                    <span>View Details</span>
-                                    <svg
-                                        className={`w-4 h-4 transform transition-transform ${expandedCard === 'publicCloud' ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
 
-                                {expandedCard === 'publicCloud' && (
-                                    <div className="space-y-2">
-                                        {Object.entries(results.publicCloud.details).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}</span>
-                                                <span className="font-medium">€{value.toLocaleString()}</span>
+                                <div className="space-y-3">
+                                    {Object.entries(results.publicCloud.details).map(([key, value]) => (
+                                        <div key={key} className="border-l-4 border-gray-500 pl-4 py-2">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-gray-900">{key}</span>
+                                                <span className="text-sm font-bold text-gray-600">€{value.toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-xs text-gray-500">
+                                                {key === 'Compute Instances' && 'Base monthly cost for compute instances and processing power'}
+                                                {key === 'Storage' && 'Monthly cost per GB of data storage'}
+                                                {key === 'Network' && 'Data egress costs + dedicated interconnect fees'}
+                                                {key === 'Management' && 'Support cost as percentage of compute + storage + egress'}
+                                                {key === 'Data Transfer' && 'Cost per GB of data transferred out of cloud'}
+                                                {key === 'Support' && 'Estimated additional support and management costs'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1821,11 +2232,7 @@ export default function Overview()
                             </button>
                         </div>
 
-                        <form name="advanced-lead" method="POST" action="/" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
-                            <input type="hidden" name="form-name" value="advanced-lead" />
-                            <div style={{ display: 'none' }}>
-                                <label>Don't fill this out if you're human: <input name="bot-field" /></label>
-                            </div>
+                        <form onSubmit={handleSurveySubmit} className="space-y-4">
 
                             {/* Primary Use */}
                             <div>
@@ -1999,14 +2406,6 @@ export default function Overview()
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                onClick={() =>
-                                {
-                                    // Close modal after submission
-                                    setTimeout(() =>
-                                    {
-                                        closeSurveyModal()
-                                    }, 1000)
-                                }}
                                 className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors duration-200"
                             >
                                 Submit Survey
