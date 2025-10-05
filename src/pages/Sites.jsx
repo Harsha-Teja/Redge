@@ -5,6 +5,7 @@
  * Displays contact-lead form submissions in a table format
  */
 import { useState, useEffect } from 'react'
+import { fetchFormSubmissions, testSupabaseConnection } from '../lib/supabase.js'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
 
 function Sites()
@@ -13,34 +14,31 @@ function Sites()
     const [formSubmissions, setFormSubmissions] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [connectionTest, setConnectionTest] = useState(null)
 
     /**
-     * Fetches contact-lead form submissions from Netlify Forms API
-     * This function retrieves all form submissions for the 'customer-lead' form
+     * Fetches contact-lead form submissions from Supabase
+     * This function retrieves all form submissions from the database
      */
-    const fetchFormSubmissions = async () =>
+    const fetchFormSubmissionsData = async () =>
     {
         try
         {
             setLoading(true)
             setError(null)
 
-            console.log('Fetching form submissions from:', '/.netlify/functions/get-form-submissions')
-            const response = await fetch('/.netlify/functions/get-form-submissions')
+            console.log('Fetching form submissions from Supabase...')
+            const result = await fetchFormSubmissions()
 
-            console.log('Response status:', response.status)
-            console.log('Response headers:', response.headers)
-
-            if (!response.ok)
+            if (result.success)
             {
-                const errorText = await response.text()
-                console.error('Response error text:', errorText)
-                throw new Error(`Failed to fetch form submissions: ${response.status} ${response.statusText}`)
+                console.log('Form submissions fetched successfully:', result.submissions)
+                setFormSubmissions(result.submissions || [])
+            } else
+            {
+                console.error('Error fetching form submissions:', result.error)
+                setError(`Failed to load form submissions: ${result.error}`)
             }
-
-            const data = await response.json()
-            console.log('Response data:', data)
-            setFormSubmissions(data.submissions || [])
         } catch (err)
         {
             console.error('Error fetching form submissions:', err)
@@ -54,8 +52,19 @@ function Sites()
     // Fetch form submissions when component mounts
     useEffect(() =>
     {
-        fetchFormSubmissions()
+        fetchFormSubmissionsData()
     }, [])
+
+    /**
+     * Test Supabase connection
+     */
+    const testConnection = async () =>
+    {
+        console.log('Testing Supabase connection...')
+        const result = await testSupabaseConnection()
+        setConnectionTest(result)
+        console.log('Connection test result:', result)
+    }
 
     /**
      * Formats a date string to a readable format
@@ -96,13 +105,37 @@ function Sites()
                         <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Contact Lead Submissions</h2>
-                                <button
-                                    onClick={fetchFormSubmissions}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                >
-                                    Refresh
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={testConnection}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                    >
+                                        Test Connection
+                                    </button>
+                                    <button
+                                        onClick={fetchFormSubmissionsData}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                    >
+                                        Refresh
+                                    </button>
+                                </div>
                             </div>
+
+                            {connectionTest && (
+                                <div className={`mb-4 p-4 rounded-lg ${connectionTest.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                    <h3 className={`font-semibold ${connectionTest.success ? 'text-green-800' : 'text-red-800'}`}>
+                                        Connection Test Result
+                                    </h3>
+                                    <p className={`text-sm ${connectionTest.success ? 'text-green-600' : 'text-red-600'}`}>
+                                        {connectionTest.success ? connectionTest.message : connectionTest.error}
+                                    </p>
+                                    {connectionTest.details && (
+                                        <pre className="text-xs mt-2 text-gray-600 overflow-auto">
+                                            {JSON.stringify(connectionTest.details, null, 2)}
+                                        </pre>
+                                    )}
+                                </div>
+                            )}
 
                             {loading ? (
                                 <div className="flex items-center justify-center py-8">
@@ -113,7 +146,7 @@ function Sites()
                                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
                                     <p className="text-red-600">{error}</p>
                                     <button
-                                        onClick={fetchFormSubmissions}
+                                        onClick={fetchFormSubmissionsData}
                                         className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                                     >
                                         Try Again
@@ -156,7 +189,7 @@ function Sites()
                                                 <tr key={submission.id} className="hover:bg-gray-50">
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="text-sm font-medium text-gray-900">
-                                                            {submission.companyName}
+                                                            {submission.company_name}
                                                         </div>
                                                         <div className="text-sm text-gray-500">
                                                             {submission.role}
@@ -176,13 +209,13 @@ function Sites()
                                                         {submission.location}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.currentITLoad}
+                                                        {submission.current_it_load}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.contractTerm}
+                                                        {submission.contract_term}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {formatDate(submission.submittedAt)}
+                                                        {formatDate(submission.submitted_at)}
                                                     </td>
                                                 </tr>
                                             ))}

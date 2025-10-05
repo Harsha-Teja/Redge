@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { calculateAllSolutions } from '../lib/costing'
+import { submitFormToSupabase } from '../lib/supabase.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 // Using inline SVG icons instead of external package
@@ -583,8 +584,12 @@ export default function Overview()
             console.log('Using fallback results:', calculatedResults)
         }
 
-        // Submit form data to Netlify (in background)
-        await submitToNetlify(formData)
+        // Submit form data to Supabase (in background)
+        const supabaseSuccess = await submitToSupabase(formData)
+        if (!supabaseSuccess)
+        {
+            console.warn('Form submission to Supabase failed, but calculations will continue')
+        }
 
         // Mark form as submitted
         localStorage.setItem('redge_main_form_submitted', 'true')
@@ -599,31 +604,28 @@ export default function Overview()
     }
 
     /**
-     * Submit form data to Netlify Forms
+     * Submit form data to Supabase
      */
-    async function submitToNetlify(formData)
+    async function submitToSupabase(formData)
     {
         try
         {
-            const formDataToSubmit = new FormData()
-            formDataToSubmit.append('form-name', 'customer-lead')
-            formDataToSubmit.append('bot-field', '') // Honeypot field
+            console.log('Submitting form data to Supabase...')
+            const result = await submitFormToSupabase(formData)
 
-            // Add all form fields
-            Object.keys(formData).forEach(key =>
+            if (result.success)
             {
-                formDataToSubmit.append(key, formData[key] || '')
-            })
-
-            await fetch('/', {
-                method: 'POST',
-                body: formDataToSubmit
-            })
-
-            console.log('Form data submitted to Netlify successfully')
+                console.log('Form data submitted to Supabase successfully:', result.data)
+                return true
+            } else
+            {
+                console.error('Error submitting to Supabase:', result.error)
+                return false
+            }
         } catch (error)
         {
-            console.error('Error submitting to Netlify:', error)
+            console.error('Error submitting to Supabase:', error)
+            return false
         }
     }
 
@@ -728,11 +730,7 @@ export default function Overview()
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Your Requirements</h3>
 
-                            <form name="customer-lead" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" onSubmit={handleSubmit} className="space-y-6">
-                                <input type="hidden" name="form-name" value="customer-lead" />
-                                <div style={{ display: 'none' }}>
-                                    <label>Don't fill this out if you're human: <input name="bot-field" /></label>
-                                </div>
+                            <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Company Information Section */}
                                 <div className="space-y-4">
                                     <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-1">
@@ -1906,11 +1904,7 @@ export default function Overview()
                             </button>
                         </div>
 
-                        <form name="advanced-lead" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
-                            <input type="hidden" name="form-name" value="advanced-lead" />
-                            <div style={{ display: 'none' }}>
-                                <label>Don't fill this out if you're human: <input name="bot-field" /></label>
-                            </div>
+                        <form className="space-y-4">
 
                             {/* Primary Use */}
                             <div>
