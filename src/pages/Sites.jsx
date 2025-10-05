@@ -338,6 +338,127 @@ function Sites()
         return null
     }
 
+    /**
+     * Calculate feasibility scores for candidate sites
+     * @returns {Array} Array of top 3 candidate sites with scores
+     */
+    const getTopCandidateSites = () =>
+    {
+        // Calculate total demand from form submissions
+        const totalDemand = formSubmissions.reduce((acc, submission) =>
+            acc + (parseFloat(submission.current_it_load) || 0), 0
+        )
+
+        // Calculate demand by county
+        const demandByCounty = formSubmissions.reduce((acc, submission) =>
+        {
+            const location = submission.eircode || submission.location || 'Dublin'
+            const county = extractCountyFromLocation(location)
+            if (!acc[county])
+            {
+                acc[county] = 0
+            }
+            acc[county] += parseFloat(submission.current_it_load) || 0
+            return acc
+        }, {})
+
+        // Define candidate sites with base characteristics
+        const candidateSites = [
+            {
+                name: 'Dublin Industrial Zone',
+                county: 'Dublin',
+                coordinates: [53.3498, -6.2603],
+                powerCapacity: 95, // Grid capacity score
+                fibreConnectivity: 90, // Carrier density
+                landAvailability: 70, // Industrial zones available
+                latencyFit: 95, // Close to major demand
+                resilience: 85, // Good infrastructure
+                strengths: ['Major carrier hub', 'High grid capacity', 'Close to demand clusters']
+            },
+            {
+                name: 'Cork Technology Park',
+                county: 'Cork',
+                coordinates: [51.8985, -8.4756],
+                powerCapacity: 80,
+                fibreConnectivity: 75,
+                landAvailability: 85,
+                latencyFit: 80,
+                resilience: 80,
+                strengths: ['Growing tech sector', 'Available land', 'Good connectivity']
+            },
+            {
+                name: 'Galway Business Park',
+                county: 'Galway',
+                coordinates: [53.2707, -9.0568],
+                powerCapacity: 70,
+                fibreConnectivity: 65,
+                landAvailability: 90,
+                latencyFit: 70,
+                resilience: 75,
+                strengths: ['Plenty of land', 'Lower costs', 'Growing region']
+            },
+            {
+                name: 'Limerick Industrial Estate',
+                county: 'Limerick',
+                coordinates: [52.6638, -8.6267],
+                powerCapacity: 75,
+                fibreConnectivity: 70,
+                landAvailability: 80,
+                latencyFit: 75,
+                resilience: 80,
+                strengths: ['Established industrial base', 'Good infrastructure', 'Central location']
+            },
+            {
+                name: 'Waterford Business District',
+                county: 'Waterford',
+                coordinates: [52.2593, -7.1101],
+                powerCapacity: 65,
+                fibreConnectivity: 60,
+                landAvailability: 85,
+                latencyFit: 70,
+                resilience: 75,
+                strengths: ['Available land', 'Lower costs', 'Growing area']
+            }
+        ]
+
+        // Calculate weighted scores for each site
+        const scoredSites = candidateSites.map(site =>
+        {
+            // Adjust scores based on demand proximity
+            const demandProximity = demandByCounty[site.county] || 0
+            const demandFactor = Math.min(1.2, 1 + (demandProximity / totalDemand) * 0.5)
+
+            const powerScore = Math.round(site.powerCapacity * demandFactor)
+            const fibreScore = site.fibreConnectivity
+            const landScore = site.landAvailability
+            const latencyScore = Math.round(site.latencyFit * demandFactor)
+            const resilienceScore = site.resilience
+
+            const totalScore = Math.min(100,
+                (powerScore * 0.4) +
+                (fibreScore * 0.25) +
+                (landScore * 0.2) +
+                (latencyScore * 0.1) +
+                (resilienceScore * 0.05)
+            )
+
+            return {
+                ...site,
+                score: Math.round(totalScore),
+                powerScore: Math.round(powerScore * 0.4),
+                fibreScore: Math.round(fibreScore * 0.25),
+                landScore: Math.round(landScore * 0.2),
+                latencyScore: Math.round(latencyScore * 0.1),
+                resilienceScore: Math.round(resilienceScore * 0.05)
+            }
+        })
+
+        // Sort by score and return top 3
+        return scoredSites
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3)
+    }
+
     return (
         <PasscodeProtection
             correctPasscode="harsha@esb.ie"
@@ -1156,6 +1277,170 @@ function Sites()
                                                 <span className="text-gray-900 font-bold text-xl">
                                                     {surveySubmissions.filter(s => s.waste_heat_reuse).length} / {surveySubmissions.length}
                                                 </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Feasibility Scoring Component */}
+                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Site Feasibility Scoring</h2>
+                            <div className="mb-6">
+                                <p className="text-gray-600 mb-4">
+                                    Scoring based on weighted criteria: Power capacity (40%), Fibre connectivity (25%),
+                                    Land availability (20%), Latency fit (10%), Resilience (5%)
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                                    <div className="bg-blue-50 rounded-lg p-3">
+                                        <div className="font-semibold text-blue-900">Power Capacity (40%)</div>
+                                        <div className="text-blue-700 text-xs">Based on total demand and grid capacity</div>
+                                    </div>
+                                    <div className="bg-green-50 rounded-lg p-3">
+                                        <div className="font-semibold text-green-900">Fibre Connectivity (25%)</div>
+                                        <div className="text-green-700 text-xs">Carrier availability and bandwidth</div>
+                                    </div>
+                                    <div className="bg-yellow-50 rounded-lg p-3">
+                                        <div className="font-semibold text-yellow-900">Land Availability (20%)</div>
+                                        <div className="text-yellow-700 text-xs">Suitable sites and planning permissions</div>
+                                    </div>
+                                    <div className="bg-purple-50 rounded-lg p-3">
+                                        <div className="font-semibold text-purple-900">Latency Fit (10%)</div>
+                                        <div className="text-purple-700 text-xs">Proximity to demand clusters</div>
+                                    </div>
+                                    <div className="bg-red-50 rounded-lg p-3">
+                                        <div className="font-semibold text-red-900">Resilience (5%)</div>
+                                        <div className="text-red-700 text-xs">Natural disaster risk and redundancy</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {formSubmissions.length === 0 && surveySubmissions.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>Not enough data for feasibility scoring yet.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Top 3 Candidate Sites */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 3 Candidate Sites</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            {getTopCandidateSites().map((site, index) => (
+                                                <div key={site.name} className={`rounded-lg p-6 ${index === 0 ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300' :
+                                                        index === 1 ? 'bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-300' :
+                                                            'bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300'
+                                                    }`}>
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h4 className="text-lg font-bold text-gray-900">{site.name}</h4>
+                                                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-200 text-yellow-800' :
+                                                                index === 1 ? 'bg-gray-200 text-gray-800' :
+                                                                    'bg-orange-200 text-orange-800'
+                                                            }`}>
+                                                            #{index + 1}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-gray-700 font-medium">Feasibility Score</span>
+                                                            <span className="text-2xl font-bold text-gray-900">{site.score}/100</span>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Power Capacity</span>
+                                                                <span className="font-medium">{site.powerScore}/40</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Fibre Connectivity</span>
+                                                                <span className="font-medium">{site.fibreScore}/25</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Land Availability</span>
+                                                                <span className="font-medium">{site.landScore}/20</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Latency Fit</span>
+                                                                <span className="font-medium">{site.latencyScore}/10</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Resilience</span>
+                                                                <span className="font-medium">{site.resilienceScore}/5</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="pt-3 border-t">
+                                                            <div className="text-sm text-gray-600">
+                                                                <div className="font-medium mb-1">Key Strengths:</div>
+                                                                <div className="text-xs space-y-1">
+                                                                    {site.strengths.map((strength, idx) => (
+                                                                        <div key={idx}>• {strength}</div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Detailed Scoring Breakdown */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scoring Methodology</h3>
+                                        <div className="bg-gray-50 rounded-lg p-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <h4 className="font-semibold text-gray-900 mb-3">Scoring Factors</h4>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Power Capacity</span>
+                                                            <span className="font-medium">Based on grid capacity and demand proximity</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Fibre Connectivity</span>
+                                                            <span className="font-medium">Carrier density and bandwidth availability</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Land Availability</span>
+                                                            <span className="font-medium">Industrial zones and planning permissions</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Latency Fit</span>
+                                                            <span className="font-medium">Distance to major demand clusters</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Resilience</span>
+                                                            <span className="font-medium">Natural disaster risk and redundancy</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-gray-900 mb-3">Cost Assumptions</h4>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">On-premise CapEx</span>
+                                                            <span className="font-medium">€15,000/kW + 25% soft costs</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Colo Monthly</span>
+                                                            <span className="font-medium">€800/kW + €50/Gbps</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Energy Price</span>
+                                                            <span className="font-medium">€80/MWh</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">PUE Target</span>
+                                                            <span className="font-medium">1.5 (industry standard)</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">WACC</span>
+                                                            <span className="font-medium">8% (weighted average cost of capital)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
