@@ -888,209 +888,279 @@ function Sites()
                             </div>
                         </div>
 
-                        {/* Sites Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-                            {/* Site 1 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Dublin North</h3>
-                                    <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                                        Active
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Dublin, Ireland</p>
-                                    <p><strong>Capacity:</strong> 2.5 MW</p>
-                                    <p><strong>Status:</strong> Operational</p>
-                                    <p><strong>PUE:</strong> 1.3</p>
-                                    <p><strong>Established:</strong> 2023</p>
-                                </div>
-                            </div>
-
-                            {/* Site 2 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Cork South</h3>
-                                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
-                                        Planning
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Cork, Ireland</p>
-                                    <p><strong>Capacity:</strong> 1.8 MW</p>
-                                    <p><strong>Status:</strong> In Development</p>
-                                    <p><strong>PUE:</strong> 1.2 (Target)</p>
-                                    <p><strong>Expected:</strong> Q2 2024</p>
-                                </div>
-                            </div>
-
-                            {/* Site 3 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Galway West</h3>
-                                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                                        Design
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Galway, Ireland</p>
-                                    <p><strong>Capacity:</strong> 1.2 MW</p>
-                                    <p><strong>Status:</strong> Design Phase</p>
-                                    <p><strong>PUE:</strong> 1.1 (Target)</p>
-                                    <p><strong>Expected:</strong> Q4 2024</p>
-                                </div>
-                            </div>
-
-                            {/* Site 4 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Limerick Central</h3>
-                                    <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
-                                        Proposed
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Limerick, Ireland</p>
-                                    <p><strong>Capacity:</strong> 0.8 MW</p>
-                                    <p><strong>Status:</strong> Feasibility Study</p>
-                                    <p><strong>PUE:</strong> 1.0 (Target)</p>
-                                    <p><strong>Expected:</strong> 2025</p>
-                                </div>
-                            </div>
-
-                            {/* Site 5 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Waterford East</h3>
-                                    <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
-                                        Research
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Waterford, Ireland</p>
-                                    <p><strong>Capacity:</strong> 0.5 MW</p>
-                                    <p><strong>Status:</strong> Research Phase</p>
-                                    <p><strong>PUE:</strong> 0.9 (Target)</p>
-                                    <p><strong>Expected:</strong> 2026</p>
-                                </div>
-                            </div>
-
-                            {/* Site 6 */}
-                            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">Belfast North</h3>
-                                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full">
-                                        Partnership
-                                    </span>
-                                </div>
-                                <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Location:</strong> Belfast, Northern Ireland</p>
-                                    <p><strong>Capacity:</strong> 1.5 MW</p>
-                                    <p><strong>Status:</strong> Partnership Discussion</p>
-                                    <p><strong>PUE:</strong> 1.4 (Estimate)</p>
-                                    <p><strong>Expected:</strong> TBD</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Summary Stats */}
+                        {/* Demand Aggregation - Customer Lead Forms */}
                         <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Site Summary</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-blue-600 mb-2">6</div>
-                                    <div className="text-gray-600">Total Sites</div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Demand Aggregation - Customer Leads</h2>
+                            {formSubmissions.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>Not enough data for demand aggregation yet.</p>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-green-600 mb-2">8.3 MW</div>
-                                    <div className="text-gray-600">Total Capacity</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {/* Location Summary */}
+                                    <div className="bg-blue-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-blue-900 mb-4">By Location</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                formSubmissions.reduce((acc, submission) =>
+                                                {
+                                                    const location = submission.eircode || submission.location || 'Dublin'
+                                                    const county = extractCountyFromLocation(location)
+                                                    if (!acc[county])
+                                                    {
+                                                        acc[county] = { count: 0, totalLoad: 0 }
+                                                    }
+                                                    acc[county].count++
+                                                    acc[county].totalLoad += parseFloat(submission.current_it_load) || 0
+                                                    return acc
+                                                }, {})
+                                            ).map(([county, data]) => (
+                                                <div key={county} className="flex justify-between items-center">
+                                                    <span className="text-blue-700 font-medium">{county}</span>
+                                                    <span className="text-blue-900 font-bold">
+                                                        {data.count} companies, {data.totalLoad.toFixed(1)} kW
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Sector Summary */}
+                                    <div className="bg-green-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-green-900 mb-4">By Sector</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                formSubmissions.reduce((acc, submission) =>
+                                                {
+                                                    const sector = submission.sector
+                                                    if (!acc[sector])
+                                                    {
+                                                        acc[sector] = { count: 0, totalLoad: 0 }
+                                                    }
+                                                    acc[sector].count++
+                                                    acc[sector].totalLoad += parseFloat(submission.current_it_load) || 0
+                                                    return acc
+                                                }, {})
+                                            ).map(([sector, data]) => (
+                                                <div key={sector} className="flex justify-between items-center">
+                                                    <span className="text-green-700 font-medium">{sector}</span>
+                                                    <span className="text-green-900 font-bold">
+                                                        {data.count} companies, {data.totalLoad.toFixed(1)} kW
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Growth Summary */}
+                                    <div className="bg-purple-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-purple-900 mb-4">Growth Projections</h3>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-purple-700 font-medium">12 Month Growth</span>
+                                                <span className="text-purple-900 font-bold">
+                                                    {formSubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.growth_12_month) || 0), 0
+                                                    ) / formSubmissions.length}% avg
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-purple-700 font-medium">24 Month Growth</span>
+                                                <span className="text-purple-900 font-bold">
+                                                    {formSubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.growth_24_month) || 0), 0
+                                                    ) / formSubmissions.length}% avg
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-purple-700 font-medium">36 Month Growth</span>
+                                                <span className="text-purple-900 font-bold">
+                                                    {formSubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.growth_36_month) || 0), 0
+                                                    ) / formSubmissions.length}% avg
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Total Summary */}
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Demand</h3>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-700 font-medium">Total Companies</span>
+                                                <span className="text-gray-900 font-bold text-xl">{formSubmissions.length}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-700 font-medium">Total IT Load</span>
+                                                <span className="text-gray-900 font-bold text-xl">
+                                                    {formSubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.current_it_load) || 0), 0
+                                                    ).toFixed(1)} kW
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-700 font-medium">Total Racks</span>
+                                                <span className="text-gray-900 font-bold text-xl">
+                                                    {formSubmissions.reduce((acc, submission) =>
+                                                        acc + (parseInt(submission.current_racks) || 0), 0
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-yellow-600 mb-2">1</div>
-                                    <div className="text-gray-600">Operational</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-purple-600 mb-2">5</div>
-                                    <div className="text-gray-600">In Development</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
 
-                        {/* Features Section */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                            <div className="bg-white rounded-xl shadow-lg p-8">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4">Key Features</h3>
-                                <ul className="space-y-3 text-gray-600">
-                                    <li className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                        Modular design for scalability
-                                    </li>
-                                    <li className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                        Renewable energy integration
-                                    </li>
-                                    <li className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                        Edge computing capabilities
-                                    </li>
-                                    <li className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                        Low latency connectivity
-                                    </li>
-                                </ul>
-                            </div>
+                        {/* Demand Aggregation - Survey Forms */}
+                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Demand Aggregation - Survey Data</h2>
+                            {surveySubmissions.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>Not enough data for demand aggregation yet.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {/* Primary Use Summary */}
+                                    <div className="bg-indigo-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-indigo-900 mb-4">By Primary Use</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                surveySubmissions.reduce((acc, submission) =>
+                                                {
+                                                    const use = submission.primary_use
+                                                    if (!acc[use])
+                                                    {
+                                                        acc[use] = 0
+                                                    }
+                                                    acc[use]++
+                                                    return acc
+                                                }, {})
+                                            ).map(([use, count]) => (
+                                                <div key={use} className="flex justify-between items-center">
+                                                    <span className="text-indigo-700 font-medium">{use}</span>
+                                                    <span className="text-indigo-900 font-bold">{count} responses</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                            <div className="bg-white rounded-xl shadow-lg p-8">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-4">Sustainability Goals</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>Carbon Neutral</span>
-                                            <span>2025</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                            <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                                    {/* Budget Summary */}
+                                    <div className="bg-yellow-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-yellow-900 mb-4">Budget Analysis</h3>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-yellow-700 font-medium">Avg CapEx Budget</span>
+                                                <span className="text-yellow-900 font-bold">
+                                                    €{Math.round(surveySubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.capex_budget) || 0), 0
+                                                    ) / surveySubmissions.length).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-yellow-700 font-medium">Avg OpEx Budget</span>
+                                                <span className="text-yellow-900 font-bold">
+                                                    €{Math.round(surveySubmissions.reduce((acc, submission) =>
+                                                        acc + (parseFloat(submission.opex_budget) || 0), 0
+                                                    ) / surveySubmissions.length).toLocaleString()}/mo
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>100% Renewable</span>
-                                            <span>2026</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                            <div className="bg-blue-500 h-2 rounded-full" style={{ width: '60%' }}></div>
+
+                                    {/* Contract & Sustainability */}
+                                    <div className="bg-teal-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-teal-900 mb-4">Contract Preferences</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                surveySubmissions.reduce((acc, submission) =>
+                                                {
+                                                    const length = submission.contract_length
+                                                    if (!acc[length])
+                                                    {
+                                                        acc[length] = 0
+                                                    }
+                                                    acc[length]++
+                                                    return acc
+                                                }, {})
+                                            ).map(([length, count]) => (
+                                                <div key={length} className="flex justify-between items-center">
+                                                    <span className="text-teal-700 font-medium">{length}</span>
+                                                    <span className="text-teal-900 font-bold">{count} responses</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                                            <span>PUE &lt; 1.2</span>
-                                            <span>2024</span>
+
+                                    {/* Compliance Summary */}
+                                    <div className="bg-red-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-red-900 mb-4">Compliance Requirements</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                surveySubmissions.reduce((acc, submission) =>
+                                                {
+                                                    submission.compliance.forEach(comp =>
+                                                    {
+                                                        if (!acc[comp])
+                                                        {
+                                                            acc[comp] = 0
+                                                        }
+                                                        acc[comp]++
+                                                    })
+                                                    return acc
+                                                }, {})
+                                            ).map(([comp, count]) => (
+                                                <div key={comp} className="flex justify-between items-center">
+                                                    <span className="text-red-700 font-medium">{comp}</span>
+                                                    <span className="text-red-900 font-bold">{count} responses</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                            <div className="bg-purple-500 h-2 rounded-full" style={{ width: '90%' }}></div>
+                                    </div>
+
+                                    {/* PUE Expectations */}
+                                    <div className="bg-orange-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-orange-900 mb-4">PUE Expectations</h3>
+                                        <div className="space-y-2">
+                                            {Object.entries(
+                                                surveySubmissions.reduce((acc, submission) =>
+                                                {
+                                                    const pue = submission.pue_expectation
+                                                    if (!acc[pue])
+                                                    {
+                                                        acc[pue] = 0
+                                                    }
+                                                    acc[pue]++
+                                                    return acc
+                                                }, {})
+                                            ).map(([pue, count]) => (
+                                                <div key={pue} className="flex justify-between items-center">
+                                                    <span className="text-orange-700 font-medium">{pue}</span>
+                                                    <span className="text-orange-900 font-bold">{count} responses</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Total Survey Summary */}
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Summary</h3>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-700 font-medium">Total Responses</span>
+                                                <span className="text-gray-900 font-bold text-xl">{surveySubmissions.length}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-700 font-medium">Waste Heat Interest</span>
+                                                <span className="text-gray-900 font-bold text-xl">
+                                                    {surveySubmissions.filter(s => s.waste_heat_reuse).length} / {surveySubmissions.length}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Contact Section */}
-                        <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-xl shadow-lg p-8 text-white text-center">
-                            <h3 className="text-2xl font-bold mb-4">Interested in Our Sites?</h3>
-                            <p className="text-lg mb-6 opacity-90">
-                                Learn more about our modular data center solutions and how they can benefit your organization.
-                            </p>
-                            <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                                Contact Our Team
-                            </button>
+                            )}
                         </div>
                     </div>
                 </div>
