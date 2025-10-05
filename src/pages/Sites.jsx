@@ -7,6 +7,55 @@
 import { useState, useEffect } from 'react'
 import { fetchFormSubmissions, fetchContactSubmissions, fetchSurveySubmissions } from '../lib/supabase.js'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// Fix for default markers in React
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+})
+
+// Custom marker icons for different submission types
+const createCustomIcon = (color) => new L.DivIcon({
+    className: 'custom-div-icon',
+    html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+})
+
+// County coordinates for Ireland
+const COUNTY_COORDINATES = {
+    'Dublin': [53.3498, -6.2603],
+    'Cork': [51.8985, -8.4756],
+    'Galway': [53.2707, -9.0568],
+    'Limerick': [52.6638, -8.6267],
+    'Waterford': [52.2593, -7.1101],
+    'Wexford': [52.3369, -6.4633],
+    'Wicklow': [53.1024, -6.0814],
+    'Kildare': [53.1559, -6.9094],
+    'Meath': [53.6546, -6.6564],
+    'Louth': [53.9259, -6.4884],
+    'Monaghan': [54.2489, -6.9680],
+    'Cavan': [53.9908, -7.3616],
+    'Longford': [53.7259, -7.7992],
+    'Westmeath': [53.5345, -7.3396],
+    'Offaly': [53.2734, -7.4888],
+    'Laois': [53.0326, -7.3000],
+    'Kilkenny': [52.6541, -7.2442],
+    'Carlow': [52.8408, -6.9261],
+    'Tipperary': [52.4738, -8.1619],
+    'Clare': [52.8652, -8.9806],
+    'Kerry': [52.2605, -9.6887],
+    'Mayo': [53.7609, -9.1167],
+    'Sligo': [54.2707, -8.4695],
+    'Leitrim': [54.1169, -8.2000],
+    'Roscommon': [53.6332, -8.1831],
+    'Donegal': [54.6541, -8.1047]
+}
 
 function Sites()
 {
@@ -144,6 +193,151 @@ function Sites()
         })
     }
 
+    /**
+     * Process submissions to create map markers with clustering
+     * @returns {Array} Array of map markers with coordinates and submission data
+     */
+    const processSubmissionsForMap = () =>
+    {
+        const mapData = []
+
+        // Process customer lead submissions
+        formSubmissions.forEach((submission, index) =>
+        {
+            const location = submission.location || submission.eircode || 'Dublin'
+            const county = extractCountyFromLocation(location)
+            const coordinates = COUNTY_COORDINATES[county] || COUNTY_COORDINATES['Dublin']
+
+            mapData.push({
+                id: `customer-${submission.id}`,
+                type: 'customer',
+                coordinates,
+                county,
+                submission,
+                color: '#3B82F6' // Blue for customer leads
+            })
+        })
+
+        // Process contact submissions
+        contactSubmissions.forEach((submission, index) =>
+        {
+            const location = 'Dublin' // Contact form doesn't have location, default to Dublin
+            const county = 'Dublin'
+            const coordinates = COUNTY_COORDINATES[county]
+
+            mapData.push({
+                id: `contact-${submission.id}`,
+                type: 'contact',
+                coordinates,
+                county,
+                submission,
+                color: '#10B981' // Green for contact forms
+            })
+        })
+
+        // Process survey submissions
+        surveySubmissions.forEach((submission, index) =>
+        {
+            const location = 'Dublin' // Survey form doesn't have location, default to Dublin
+            const county = 'Dublin'
+            const coordinates = COUNTY_COORDINATES[county]
+
+            mapData.push({
+                id: `survey-${submission.id}`,
+                type: 'survey',
+                coordinates,
+                county,
+                submission,
+                color: '#8B5CF6' // Purple for surveys
+            })
+        })
+
+        // Cluster submissions by county
+        const clusteredData = clusterSubmissionsByCounty(mapData)
+        return clusteredData
+    }
+
+    /**
+     * Extract county from location string
+     * @param {string} location - Location string
+     * @returns {string} County name
+     */
+    const extractCountyFromLocation = (location) =>
+    {
+        if (!location) return 'Dublin'
+
+        const locationLower = location.toLowerCase()
+        for (const county of Object.keys(COUNTY_COORDINATES))
+        {
+            if (locationLower.includes(county.toLowerCase()))
+            {
+                return county
+            }
+        }
+        return 'Dublin' // Default to Dublin
+    }
+
+    /**
+     * Cluster submissions by county
+     * @param {Array} submissions - Array of submission data
+     * @returns {Array} Clustered submission data
+     */
+    const clusterSubmissionsByCounty = (submissions) =>
+    {
+        const countyMap = new Map()
+
+        submissions.forEach(submission =>
+        {
+            const key = `${submission.coordinates[0]},${submission.coordinates[1]}`
+            if (!countyMap.has(key))
+            {
+                countyMap.set(key, {
+                    coordinates: submission.coordinates,
+                    county: submission.county,
+                    submissions: [],
+                    totalCount: 0,
+                    customerCount: 0,
+                    contactCount: 0,
+                    surveyCount: 0
+                })
+            }
+
+            const cluster = countyMap.get(key)
+            cluster.submissions.push(submission)
+            cluster.totalCount++
+
+            if (submission.type === 'customer') cluster.customerCount++
+            if (submission.type === 'contact') cluster.contactCount++
+            if (submission.type === 'survey') cluster.surveyCount++
+        })
+
+        return Array.from(countyMap.values())
+    }
+
+    /**
+     * Map bounds component to fit all of Ireland
+     */
+    const MapBounds = () =>
+    {
+        const map = useMap()
+
+        useEffect(() =>
+        {
+            // Ireland bounds: [North, West, South, East]
+            const irelandBounds = [
+                [55.4, -10.5], // Southwest
+                [55.4, -5.5],  // Southeast  
+                [51.4, -5.5],  // Northeast
+                [51.4, -10.5]  // Northwest
+            ]
+
+            // Fit the map to show all of Ireland with some padding
+            map.fitBounds(irelandBounds, { padding: [20, 20] })
+        }, [map])
+
+        return null
+    }
+
     return (
         <PasscodeProtection
             correctPasscode="harsha@esb.ie"
@@ -161,6 +355,105 @@ function Sites()
                             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                                 Explore our network of modular data center sites across Ireland, designed for optimal performance and sustainability.
                             </p>
+                        </div>
+
+                        {/* Map Visualization */}
+                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900">Submission Locations</h2>
+                                <div className="flex items-center gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                        <span>Customer Leads</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span>Contact Forms</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                        <span>Surveys</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="h-96 rounded-lg overflow-hidden">
+                                <MapContainer
+                                    center={[53.4, -8.0]}
+                                    zoom={6}
+                                    style={{ height: '100%', width: '100%' }}
+                                >
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                    <MapBounds />
+
+                                    {processSubmissionsForMap().map((cluster) => (
+                                        <Marker
+                                            key={`cluster-${cluster.coordinates[0]}-${cluster.coordinates[1]}`}
+                                            position={[cluster.coordinates[0], cluster.coordinates[1]]}
+                                            icon={createCustomIcon(cluster.totalCount > 1 ? '#EF4444' : '#3B82F6')}
+                                        >
+                                            <Popup>
+                                                <div className="p-2">
+                                                    <h3 className="font-semibold text-lg mb-2">{cluster.county}</h3>
+                                                    <div className="space-y-1 text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-blue-600">Customer Leads:</span>
+                                                            <span className="font-medium">{cluster.customerCount}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-green-600">Contact Forms:</span>
+                                                            <span className="font-medium">{cluster.contactCount}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-purple-600">Surveys:</span>
+                                                            <span className="font-medium">{cluster.surveyCount}</span>
+                                                        </div>
+                                                        <div className="border-t pt-1 mt-2">
+                                                            <div className="flex justify-between font-semibold">
+                                                                <span>Total:</span>
+                                                                <span>{cluster.totalCount}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    ))}
+                                </MapContainer>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-blue-50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="font-semibold text-blue-900">Customer Leads</h4>
+                                            <p className="text-blue-700 text-sm">Detailed form submissions</p>
+                                        </div>
+                                        <span className="text-2xl font-bold text-blue-600">{formSubmissions.length}</span>
+                                    </div>
+                                </div>
+                                <div className="bg-green-50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="font-semibold text-green-900">Contact Forms</h4>
+                                            <p className="text-green-700 text-sm">General inquiries</p>
+                                        </div>
+                                        <span className="text-2xl font-bold text-green-600">{contactSubmissions.length}</span>
+                                    </div>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="font-semibold text-purple-900">Surveys</h4>
+                                            <p className="text-purple-700 text-sm">Advanced surveys</p>
+                                        </div>
+                                        <span className="text-2xl font-bold text-purple-600">{surveySubmissions.length}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Form Submissions Tables */}
@@ -577,8 +870,8 @@ function Sites()
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${submission.waste_heat_reuse
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : 'bg-gray-100 text-gray-800'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-gray-100 text-gray-800'
                                                                 }`}>
                                                                 {submission.waste_heat_reuse ? 'Yes' : 'No'}
                                                             </span>
