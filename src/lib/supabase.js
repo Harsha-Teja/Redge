@@ -225,3 +225,99 @@ export const fetchContactSubmissions = async () =>
         }
     }
 }
+
+/**
+ * Submits survey form data to Supabase
+ * @param {Object} surveyData - The survey form data to submit
+ * @returns {Promise<Object>} - Result object with success status and data/error
+ */
+export const submitSurveyToSupabase = async (surveyData) =>
+{
+    try
+    {
+        console.log('Submitting survey form data to Supabase:', surveyData)
+
+        const { data, error } = await supabase
+            .from('survey_submissions')
+            .insert([
+                {
+                    primary_use: surveyData.primaryUse,
+                    waste_heat_reuse: surveyData.wasteHeatReuse,
+                    pue_expectation: parseFloat(surveyData.pueExpectation),
+                    commercial_preference: surveyData.commercialPreference,
+                    capex_budget: surveyData.capexBudget ? parseInt(surveyData.capexBudget) : null,
+                    opex_budget: surveyData.opexBudget ? parseInt(surveyData.opexBudget) : null,
+                    contract_length: surveyData.contractLength,
+                    sustainability_target: surveyData.sustainabilityTarget,
+                    compliance: surveyData.compliance,
+                    submitted_at: new Date().toISOString()
+                }
+            ])
+            .select()
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message
+            }
+        }
+
+        console.log('Survey form submitted successfully:', data)
+        return {
+            success: true,
+            data: data[0]
+        }
+
+    } catch (error)
+    {
+        console.error('Error submitting survey form:', error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+/**
+ * Fetches all survey form submissions from Supabase
+ * @returns {Promise<Object>} - Result object with success status and submissions/error
+ */
+export const fetchSurveySubmissions = async () =>
+{
+    try
+    {
+        console.log('Fetching survey form submissions from Supabase')
+
+        const { data, error } = await supabase
+            .from('survey_submissions')
+            .select('*')
+            .order('submitted_at', { ascending: false })
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message,
+                submissions: []
+            }
+        }
+
+        console.log('Survey form submissions fetched successfully:', data)
+        return {
+            success: true,
+            submissions: data
+        }
+
+    } catch (error)
+    {
+        console.error('Error fetching survey form submissions:', error)
+        return {
+            success: false,
+            error: error.message,
+            submissions: []
+        }
+    }
+}

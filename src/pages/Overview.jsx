@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { calculateAllSolutions } from '../lib/costing'
-import { submitFormToSupabase } from '../lib/supabase.js'
+import { submitFormToSupabase, submitSurveyToSupabase } from '../lib/supabase.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 // Using inline SVG icons instead of external package
@@ -418,34 +418,53 @@ export default function Overview()
      */
     const handleSurveySubmit = async (e) =>
     {
+        e.preventDefault()
+
         // Check if already submitted
         if (hasSubmittedSurvey)
         {
-            e.preventDefault()
             alert('You have already submitted the survey. Thank you for your submission!')
             closeSurveyModal()
             return
         }
 
-        // Don't prevent default - let Netlify handle the form submission
+        try
+        {
+            console.log('Submitting survey form to Supabase:', surveyData)
 
-        // Store in localStorage
-        const submissionData = {
-            ...surveyData,
-            timestamp: new Date().toISOString()
+            const result = await submitSurveyToSupabase(surveyData)
+
+            if (result.success)
+            {
+                console.log('Survey form submitted successfully:', result.data)
+
+                // Store in localStorage for local tracking
+                const submissionData = {
+                    ...surveyData,
+                    timestamp: new Date().toISOString()
+                }
+                localStorage.setItem('redge_advanced_survey', JSON.stringify(submissionData))
+
+                // Mark survey as submitted
+                localStorage.setItem('redge_survey_submitted', 'true')
+                setHasSubmittedSurvey(true)
+
+                // Show toast
+                setShowToast(true)
+                setTimeout(() => setShowToast(false), 3000)
+
+                // Close modal
+                closeSurveyModal()
+            } else
+            {
+                console.error('Error submitting survey form:', result.error)
+                alert('Sorry, there was an error submitting your survey. Please try again.')
+            }
+        } catch (error)
+        {
+            console.error('Error submitting survey form:', error)
+            alert('Sorry, there was an error submitting your survey. Please try again.')
         }
-        localStorage.setItem('redge_advanced_survey', JSON.stringify(submissionData))
-
-        // Mark survey as submitted
-        localStorage.setItem('redge_survey_submitted', 'true')
-        setHasSubmittedSurvey(true)
-
-        // Show toast
-        setShowToast(true)
-        setTimeout(() => setShowToast(false), 3000)
-
-        // Close modal
-        closeSurveyModal()
     }
 
     /**
@@ -1904,7 +1923,7 @@ export default function Overview()
                             </button>
                         </div>
 
-                        <form className="space-y-4">
+                        <form onSubmit={handleSurveySubmit} className="space-y-4">
 
                             {/* Primary Use */}
                             <div>
@@ -2078,14 +2097,6 @@ export default function Overview()
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                onClick={() =>
-                                {
-                                    // Close modal after submission
-                                    setTimeout(() =>
-                                    {
-                                        closeSurveyModal()
-                                    }, 1000)
-                                }}
                                 className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors duration-200"
                             >
                                 Submit Survey

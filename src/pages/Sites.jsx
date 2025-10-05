@@ -5,7 +5,7 @@
  * Displays contact-lead form submissions in a table format
  */
 import { useState, useEffect } from 'react'
-import { fetchFormSubmissions, fetchContactSubmissions } from '../lib/supabase.js'
+import { fetchFormSubmissions, fetchContactSubmissions, fetchSurveySubmissions } from '../lib/supabase.js'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
 
 function Sites()
@@ -13,10 +13,13 @@ function Sites()
     // State for managing form submissions data
     const [formSubmissions, setFormSubmissions] = useState([])
     const [contactSubmissions, setContactSubmissions] = useState([])
+    const [surveySubmissions, setSurveySubmissions] = useState([])
     const [loading, setLoading] = useState(true)
     const [contactLoading, setContactLoading] = useState(true)
+    const [surveyLoading, setSurveyLoading] = useState(true)
     const [error, setError] = useState(null)
     const [contactError, setContactError] = useState(null)
+    const [surveyError, setSurveyError] = useState(null)
 
     /**
      * Fetches contact-lead form submissions from Supabase
@@ -84,11 +87,45 @@ function Sites()
         }
     }
 
+    /**
+     * Fetches survey form submissions from Supabase
+     * This function retrieves all survey form submissions from the database
+     */
+    const fetchSurveySubmissionsData = async () =>
+    {
+        try
+        {
+            setSurveyLoading(true)
+            setSurveyError(null)
+
+            console.log('Fetching survey submissions from Supabase...')
+            const result = await fetchSurveySubmissions()
+
+            if (result.success)
+            {
+                console.log('Survey submissions fetched successfully:', result.submissions)
+                setSurveySubmissions(result.submissions || [])
+            } else
+            {
+                console.error('Error fetching survey submissions:', result.error)
+                setSurveyError(`Failed to load survey submissions: ${result.error}`)
+            }
+        } catch (err)
+        {
+            console.error('Error fetching survey submissions:', err)
+            setSurveyError(`Failed to load survey submissions: ${err.message}`)
+        } finally
+        {
+            setSurveyLoading(false)
+        }
+    }
+
     // Fetch form submissions when component mounts
     useEffect(() =>
     {
         fetchFormSubmissionsData()
         fetchContactSubmissionsData()
+        fetchSurveySubmissionsData()
     }, [])
 
     /**
@@ -142,6 +179,12 @@ function Sites()
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                                     >
                                         Refresh Contact Forms
+                                    </button>
+                                    <button
+                                        onClick={fetchSurveySubmissionsData}
+                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                    >
+                                        Refresh Surveys
                                     </button>
                                 </div>
                             </div>
@@ -425,6 +468,120 @@ function Sites()
                                                             <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.message}>
                                                                 {submission.message}
                                                             </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {formatDate(submission.submitted_at)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Survey Form Submissions */}
+                            <div className="mt-8">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Form Submissions</h3>
+                                {surveyLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                                        <span className="ml-3 text-gray-600">Loading survey submissions...</span>
+                                    </div>
+                                ) : surveyError ? (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                        <p className="text-red-600">{surveyError}</p>
+                                        <button
+                                            onClick={fetchSurveySubmissionsData}
+                                            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                ) : surveySubmissions.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>No survey form submissions found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Primary Use
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        PUE Expectation
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Commercial Preference
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Budget (€)
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Contract Length
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Sustainability
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Compliance
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Waste Heat
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Submitted
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {surveySubmissions.map((submission) => (
+                                                    <tr key={submission.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                                {submission.primary_use}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.pue_expectation}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.commercial_preference}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.capex_budget && (
+                                                                <div className="text-xs">
+                                                                    <div>CapEx: €{submission.capex_budget.toLocaleString()}</div>
+                                                                    {submission.opex_budget && (
+                                                                        <div>OpEx: €{submission.opex_budget.toLocaleString()}/mo</div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.contract_length}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.sustainability_target}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {submission.compliance.map((item, index) => (
+                                                                    <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                                        {item}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${submission.waste_heat_reuse
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : 'bg-gray-100 text-gray-800'
+                                                                }`}>
+                                                                {submission.waste_heat_reuse ? 'Yes' : 'No'}
+                                                            </span>
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                             {formatDate(submission.submitted_at)}
