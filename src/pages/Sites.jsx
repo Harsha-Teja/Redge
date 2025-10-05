@@ -61,6 +61,72 @@ const createWindFarmIcon = (capacity) =>
     }
 }
 
+// Create energy demand icon
+const createEnergyDemandIcon = (capacity) =>
+{
+    try
+    {
+        const size = Math.max(10, Math.min(20, capacity / 5)) // Scale icon size based on capacity
+        const demandIcon = L.divIcon({
+            className: 'energy-demand-icon',
+            html: `<div style="
+                background-color: #EF4444;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: ${Math.max(6, size - 4)}px;
+            ">⚡</div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+            popupAnchor: [0, -size / 2]
+        })
+        return demandIcon
+    } catch (error)
+    {
+        return new L.Icon.Default()
+    }
+}
+
+// Create energy generation icon
+const createEnergyGenerationIcon = (capacity) =>
+{
+    try
+    {
+        const size = Math.max(10, Math.min(20, capacity / 5)) // Scale icon size based on capacity
+        const generationIcon = L.divIcon({
+            className: 'energy-generation-icon',
+            html: `<div style="
+                background-color: #3B82F6;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: ${Math.max(6, size - 4)}px;
+            ">🔋</div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+            popupAnchor: [0, -size / 2]
+        })
+        return generationIcon
+    } catch (error)
+    {
+        return new L.Icon.Default()
+    }
+}
+
 // County coordinates for Ireland
 const COUNTY_COORDINATES = {
     'Dublin': [53.3498, -6.2603],
@@ -107,6 +173,11 @@ function Sites()
     // Wind farm data state
     const [windFarmData, setWindFarmData] = useState([])
     const [isLoadingWindFarms, setIsLoadingWindFarms] = useState(true)
+
+    // Energy data state
+    const [energyDemandData, setEnergyDemandData] = useState([])
+    const [energyGenerationData, setEnergyGenerationData] = useState([])
+    const [isLoadingEnergyData, setIsLoadingEnergyData] = useState(true)
 
     /**
      * Fetches contact-lead form submissions from Supabase
@@ -262,6 +333,62 @@ function Sites()
         }
 
         loadWindFarmData()
+    }, [])
+
+    // Load energy demand and generation data
+    useEffect(() =>
+    {
+        const loadEnergyData = async () =>
+        {
+            try
+            {
+                // Load energy demand data
+                const demandResponse = await fetch('/data/energy_demand.geojson')
+                if (demandResponse.ok)
+                {
+                    const demandData = await demandResponse.json()
+                    const demandFeatures = demandData.features.map(feature => ({
+                        name: feature.properties.Station_Name,
+                        transformerGroup: feature.properties.Transformer_GroupID,
+                        voltageClass: feature.properties.Voltage_Class,
+                        primaryKv: feature.properties.Primary_kV,
+                        installedCapacity: feature.properties.Installed_Capacity_MVA,
+                        demandFirmCapacity: feature.properties.Demand_FirmCapacity_MVA,
+                        demandAvailable: feature.properties.Demand_Available_MVA,
+                        lat: feature.properties.Latitude,
+                        lon: feature.properties.Longitude
+                    }))
+                    setEnergyDemandData(demandFeatures)
+                }
+
+                // Load energy generation data
+                const generationResponse = await fetch('/data/energy_generation.geojson')
+                if (generationResponse.ok)
+                {
+                    const generationData = await generationResponse.json()
+                    const generationFeatures = generationData.features.map(feature => ({
+                        name: feature.properties.Station_Name,
+                        transformerGroup: feature.properties.Transformer_GroupID,
+                        voltageClass: feature.properties.Voltage_Class,
+                        primaryKv: feature.properties.Primary_kV,
+                        installedCapacity: feature.properties.Installed_Capacity_MVA,
+                        genAvailableFirm: feature.properties.Gen_Available_Firm_MW,
+                        genAvailableNonFirm: feature.properties.Gen_Available_NonFirm_MW,
+                        lat: feature.properties.Latitude,
+                        lon: feature.properties.Longitude
+                    }))
+                    setEnergyGenerationData(generationFeatures)
+                }
+
+                setIsLoadingEnergyData(false)
+            } catch (error)
+            {
+                console.error('Error loading energy data:', error)
+                setIsLoadingEnergyData(false)
+            }
+        }
+
+        loadEnergyData()
     }, [])
 
     /**
@@ -724,6 +851,63 @@ function Sites()
                                                             <div className="text-sm text-gray-600">
                                                                 <div><strong>County:</strong> {windFarm.county}</div>
                                                                 <div><strong>Capacity:</strong> {windFarm.capacity} MW</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Energy Demand Markers */}
+                                    {!isLoadingEnergyData && energyDemandData.length > 0 && (
+                                        <>
+                                            {energyDemandData.slice(0, 15).map((demand, index) => (
+                                                <Marker
+                                                    key={`demand-${index}`}
+                                                    position={[demand.lat, demand.lon]}
+                                                    icon={createEnergyDemandIcon(parseFloat(demand.demandAvailable) || 0)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">⚡</span>
+                                                                <b className="text-red-700">{demand.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>Voltage:</strong> {demand.primaryKv}</div>
+                                                                <div><strong>Class:</strong> {demand.voltageClass}</div>
+                                                                <div><strong>Installed Capacity:</strong> {demand.installedCapacity} MVA</div>
+                                                                <div><strong>Demand Available:</strong> {demand.demandAvailable} MVA</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Energy Generation Markers */}
+                                    {!isLoadingEnergyData && energyGenerationData.length > 0 && (
+                                        <>
+                                            {energyGenerationData.slice(0, 15).map((generation, index) => (
+                                                <Marker
+                                                    key={`generation-${index}`}
+                                                    position={[generation.lat, generation.lon]}
+                                                    icon={createEnergyGenerationIcon(parseFloat(generation.genAvailableFirm) || 0)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">🔋</span>
+                                                                <b className="text-blue-700">{generation.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>Voltage:</strong> {generation.primaryKv}</div>
+                                                                <div><strong>Class:</strong> {generation.voltageClass}</div>
+                                                                <div><strong>Installed Capacity:</strong> {generation.installedCapacity} MVA</div>
+                                                                <div><strong>Firm Generation:</strong> {generation.genAvailableFirm} MW</div>
+                                                                <div><strong>Non-Firm Generation:</strong> {generation.genAvailableNonFirm} MW</div>
                                                             </div>
                                                         </div>
                                                     </Popup>
