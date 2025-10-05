@@ -5,15 +5,18 @@
  * Displays contact-lead form submissions in a table format
  */
 import { useState, useEffect } from 'react'
-import { fetchFormSubmissions } from '../lib/supabase.js'
+import { fetchFormSubmissions, fetchContactSubmissions } from '../lib/supabase.js'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
 
 function Sites()
 {
     // State for managing form submissions data
     const [formSubmissions, setFormSubmissions] = useState([])
+    const [contactSubmissions, setContactSubmissions] = useState([])
     const [loading, setLoading] = useState(true)
+    const [contactLoading, setContactLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [contactError, setContactError] = useState(null)
 
     /**
      * Fetches contact-lead form submissions from Supabase
@@ -48,10 +51,44 @@ function Sites()
         }
     }
 
+    /**
+     * Fetches contact form submissions from Supabase
+     * This function retrieves all contact form submissions from the database
+     */
+    const fetchContactSubmissionsData = async () =>
+    {
+        try
+        {
+            setContactLoading(true)
+            setContactError(null)
+
+            console.log('Fetching contact submissions from Supabase...')
+            const result = await fetchContactSubmissions()
+
+            if (result.success)
+            {
+                console.log('Contact submissions fetched successfully:', result.submissions)
+                setContactSubmissions(result.submissions || [])
+            } else
+            {
+                console.error('Error fetching contact submissions:', result.error)
+                setContactError(`Failed to load contact submissions: ${result.error}`)
+            }
+        } catch (err)
+        {
+            console.error('Error fetching contact submissions:', err)
+            setContactError(`Failed to load contact submissions: ${err.message}`)
+        } finally
+        {
+            setContactLoading(false)
+        }
+    }
+
     // Fetch form submissions when component mounts
     useEffect(() =>
     {
         fetchFormSubmissionsData()
+        fetchContactSubmissionsData()
     }, [])
 
     /**
@@ -89,234 +126,316 @@ function Sites()
                             </p>
                         </div>
 
-                        {/* Contact Lead Form Submissions Table */}
+                        {/* Form Submissions Tables */}
                         <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold text-gray-900">Contact Lead Submissions</h2>
-                                <button
-                                    onClick={fetchFormSubmissionsData}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                >
-                                    Refresh
-                                </button>
-                            </div>
-
-                            {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                    <span className="ml-3 text-gray-600">Loading form submissions...</span>
-                                </div>
-                            ) : error ? (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                                    <p className="text-red-600">{error}</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Form Submissions</h2>
+                                <div className="flex gap-2">
                                     <button
                                         onClick={fetchFormSubmissionsData}
-                                        className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                                     >
-                                        Try Again
+                                        Refresh Customer Leads
+                                    </button>
+                                    <button
+                                        onClick={fetchContactSubmissionsData}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                    >
+                                        Refresh Contact Forms
                                     </button>
                                 </div>
-                            ) : formSubmissions.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>No form submissions found.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Company
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Contact
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Sector
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Location
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    IT Load
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Racks
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Density
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Growth 12M
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Growth 24M
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Growth 36M
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    GPU/AI
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Storage
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Storage Growth Rate
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Bandwidth
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Preferred Carriers
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Contract
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Data Centre Service
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Utilisation Ramp
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Sovereignty
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Compliance
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Latency
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Availability
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Renewable
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Earliest Service Date
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    MIC Limit
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Existing Load
-                                                </th>
-                                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Submitted
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {formSubmissions.map((submission) => (
-                                                <tr key={submission.id} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-4 whitespace-nowrap">
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {submission.company_name}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            {submission.role}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900">
-                                                            {submission.email}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap">
-                                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                            {submission.sector}
-                                                        </span>
-                                                        {submission.sector_other && (
-                                                            <div className="text-xs text-gray-500 mt-1">
-                                                                {submission.sector_other}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.eircode}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.current_it_load} kW
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.current_racks}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.current_density} kW/rack
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.growth_12_month}%
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.growth_24_month}%
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.growth_36_month}%
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.gpu_ai_share}%
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.storage_tb} TB
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.storage_growth_rate}%
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.bandwidth_gbps} Gbps
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.preferred_carriers}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.contract_term}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.data_centre_service}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.utilisation_ramp}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap">
-                                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${submission.data_sovereignty === 'Yes'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-gray-100 text-gray-800'
-                                                            }`}>
-                                                            {submission.data_sovereignty}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.compliance}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.latency_tolerance}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.availability_tier}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.renewable_target}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.earliest_service_date}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.mic_limit}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        {submission.existing_load}
-                                                    </td>
-                                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {formatDate(submission.submitted_at)}
-                                                    </td>
+                            </div>
+
+                            {/* Customer Lead Form Submissions */}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Lead Submissions</h3>
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        <span className="ml-3 text-gray-600">Loading form submissions...</span>
+                                    </div>
+                                ) : error ? (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                        <p className="text-red-600">{error}</p>
+                                        <button
+                                            onClick={fetchFormSubmissionsData}
+                                            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                ) : formSubmissions.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>No customer lead submissions found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Company
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Contact
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Sector
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Location
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        IT Load
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Racks
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Density
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Growth 12M
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Growth 24M
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Growth 36M
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        GPU/AI
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Storage
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Storage Growth Rate
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Bandwidth
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Preferred Carriers
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Contract
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Data Centre Service
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Utilisation Ramp
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Sovereignty
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Compliance
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Latency
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Availability
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Renewable
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Earliest Service Date
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        MIC Limit
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Existing Load
+                                                    </th>
+                                                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Submitted
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {formSubmissions.map((submission) => (
+                                                    <tr key={submission.id} className="hover:bg-gray-50">
+                                                        <td className="px-3 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {submission.company_name}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">
+                                                                {submission.role}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-900">
+                                                                {submission.email}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap">
+                                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                                {submission.sector}
+                                                            </span>
+                                                            {submission.sector_other && (
+                                                                <div className="text-xs text-gray-500 mt-1">
+                                                                    {submission.sector_other}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.eircode}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.current_it_load} kW
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.current_racks}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.current_density} kW/rack
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.growth_12_month}%
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.growth_24_month}%
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.growth_36_month}%
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.gpu_ai_share}%
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.storage_tb} TB
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.storage_growth_rate}%
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.bandwidth_gbps} Gbps
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.preferred_carriers}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.contract_term}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.data_centre_service}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.utilisation_ramp}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap">
+                                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${submission.data_sovereignty === 'Yes'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-gray-100 text-gray-800'
+                                                                }`}>
+                                                                {submission.data_sovereignty}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.compliance}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.latency_tolerance}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.availability_tier}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.renewable_target}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.earliest_service_date}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.mic_limit}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                            {submission.existing_load}
+                                                        </td>
+                                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {formatDate(submission.submitted_at)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Contact Form Submissions */}
+                            <div className="mt-8">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Form Submissions</h3>
+                                {contactLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                                        <span className="ml-3 text-gray-600">Loading contact submissions...</span>
+                                    </div>
+                                ) : contactError ? (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                        <p className="text-red-600">{contactError}</p>
+                                        <button
+                                            onClick={fetchContactSubmissionsData}
+                                            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                        >
+                                            Try Again
+                                        </button>
+                                    </div>
+                                ) : contactSubmissions.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>No contact form submissions found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Name
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Email
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Message
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Submitted
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {contactSubmissions.map((submission) => (
+                                                    <tr key={submission.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {submission.name}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm text-gray-900">
+                                                                {submission.email}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.message}>
+                                                                {submission.message}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {formatDate(submission.submitted_at)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Sites Grid */}

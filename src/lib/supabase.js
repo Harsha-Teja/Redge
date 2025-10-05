@@ -135,3 +135,93 @@ export const fetchFormSubmissions = async () =>
         }
     }
 }
+
+/**
+ * Submits contact form data to Supabase
+ * @param {Object} contactData - The contact form data to submit
+ * @returns {Promise<Object>} - Result object with success status and data/error
+ */
+export const submitContactToSupabase = async (contactData) =>
+{
+    try
+    {
+        console.log('Submitting contact form data to Supabase:', contactData)
+
+        const { data, error } = await supabase
+            .from('contact_submissions')
+            .insert([
+                {
+                    name: contactData.name,
+                    email: contactData.email,
+                    message: contactData.message,
+                    submitted_at: new Date().toISOString()
+                }
+            ])
+            .select()
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message
+            }
+        }
+
+        console.log('Contact form submitted successfully:', data)
+        return {
+            success: true,
+            data: data[0]
+        }
+
+    } catch (error)
+    {
+        console.error('Error submitting contact form:', error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+/**
+ * Fetches all contact form submissions from Supabase
+ * @returns {Promise<Object>} - Result object with success status and submissions/error
+ */
+export const fetchContactSubmissions = async () =>
+{
+    try
+    {
+        console.log('Fetching contact form submissions from Supabase')
+
+        const { data, error } = await supabase
+            .from('contact_submissions')
+            .select('*')
+            .order('submitted_at', { ascending: false })
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message,
+                submissions: []
+            }
+        }
+
+        console.log('Contact form submissions fetched successfully:', data)
+        return {
+            success: true,
+            submissions: data
+        }
+
+    } catch (error)
+    {
+        console.error('Error fetching contact form submissions:', error)
+        return {
+            success: false,
+            error: error.message,
+            submissions: []
+        }
+    }
+}

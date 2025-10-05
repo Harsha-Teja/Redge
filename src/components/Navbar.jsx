@@ -6,6 +6,7 @@
  */
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { submitContactToSupabase } from '../lib/supabase.js'
 
 export default function Navbar()
 {
@@ -47,25 +48,41 @@ export default function Navbar()
         }))
     }
 
-    const handleContactSubmit = (e) =>
+    const handleContactSubmit = async (e) =>
     {
+        e.preventDefault()
+
         // Check if form is valid
         if (!contactForm.name || !contactForm.email || !contactForm.message)
         {
-            e.preventDefault()
             alert('Please fill in all fields.')
             return
         }
 
-        // Don't prevent default - let Netlify handle the form submission
-        console.log('Contact form submitted:', contactForm)
+        try
+        {
+            console.log('Submitting contact form to Supabase:', contactForm)
 
-        // Show success message
-        alert('Thank you for your message! We\'ll get back to you soon.')
+            const result = await submitContactToSupabase(contactForm)
 
-        // Reset form and close modal
-        setContactForm({ name: '', email: '', message: '' })
-        setIsContactModalOpen(false)
+            if (result.success)
+            {
+                console.log('Contact form submitted successfully:', result.data)
+                alert('Thank you for your message! We\'ll get back to you soon.')
+
+                // Reset form and close modal
+                setContactForm({ name: '', email: '', message: '' })
+                setIsContactModalOpen(false)
+            } else
+            {
+                console.error('Error submitting contact form:', result.error)
+                alert('Sorry, there was an error submitting your message. Please try again.')
+            }
+        } catch (error)
+        {
+            console.error('Error submitting contact form:', error)
+            alert('Sorry, there was an error submitting your message. Please try again.')
+        }
     }
 
     const openContactModal = () =>
@@ -235,16 +252,14 @@ export default function Navbar()
                                 </a>
                             </div>
 
-                            <form name="contact-form" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" className="space-y-4">
-                                <input type="hidden" name="form-name" value="contact-form" />
-                                <div style={{ display: 'none' }}>
-                                    <label>Don't fill this out if you're human: <input name="bot-field" /></label>
-                                </div>
+                            <form onSubmit={handleContactSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                     <input
                                         type="text"
                                         name="name"
+                                        value={contactForm.name}
+                                        onChange={handleContactInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="Your name"
                                         required
@@ -256,6 +271,8 @@ export default function Navbar()
                                     <input
                                         type="email"
                                         name="email"
+                                        value={contactForm.email}
+                                        onChange={handleContactInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="your.email@example.com"
                                         required
@@ -266,6 +283,8 @@ export default function Navbar()
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                                     <textarea
                                         name="message"
+                                        value={contactForm.message}
+                                        onChange={handleContactInputChange}
                                         rows={3}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                         placeholder="Your message..."
@@ -276,14 +295,6 @@ export default function Navbar()
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         type="submit"
-                                        onClick={() =>
-                                        {
-                                            // Close modal after a short delay to allow form submission
-                                            setTimeout(() =>
-                                            {
-                                                setIsContactModalOpen(false)
-                                            }, 1000)
-                                        }}
                                         className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
                                     >
                                         Send Message

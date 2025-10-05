@@ -59,3 +59,34 @@ CREATE POLICY "Allow reading form submissions" ON form_submissions_customer
 
 -- Add a comment to the table
 COMMENT ON TABLE form_submissions_customer IS 'Stores contact lead form submissions from the ReDge website';
+
+-- Create contact form submissions table
+CREATE TABLE IF NOT EXISTS contact_submissions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create an index on submitted_at for faster queries
+CREATE INDEX IF NOT EXISTS idx_contact_submissions_submitted_at ON contact_submissions(submitted_at);
+
+-- Create an index on email for faster lookups
+CREATE INDEX IF NOT EXISTS idx_contact_submissions_email ON contact_submissions(email);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE contact_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Create a policy that allows anyone to insert (for form submissions)
+CREATE POLICY "Allow public contact submissions" ON contact_submissions
+    FOR INSERT WITH CHECK (true);
+
+-- Create a policy that allows reading for authenticated users
+CREATE POLICY "Allow reading contact submissions" ON contact_submissions
+    FOR SELECT USING (true);
+
+-- Add a comment to the table
+COMMENT ON TABLE contact_submissions IS 'Stores contact form submissions from the ReDge website';
