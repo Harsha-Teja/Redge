@@ -459,6 +459,81 @@ function Sites()
             .slice(0, 3)
     }
 
+    /**
+     * Calculate financial projections for a candidate site
+     * @param {Object} site - Candidate site object
+     * @returns {Object} Financial calculations
+     */
+    const calculateSiteFinancials = (site) =>
+    {
+        // Realistic data center cost assumptions
+        const capexPerKW = 8000 // €8,000/kW (more realistic for modular data centers)
+        const softCostsPct = 0.20 // 20% (permits, design, project management)
+        const maintPct = 0.02 // 2% per year (maintenance as % of CapEx)
+        const staffingPerYr = 180000 // €180,000/year (2-3 staff for 1MW facility)
+        const insurancePerYr = 25000 // €25,000/year (facility insurance)
+        const energyPrice = 120 // €120/MWh (realistic Irish energy prices)
+        const pue = 1.3 // Power Usage Effectiveness (modern efficient design)
+        const wacc = 0.08 // 8% WACC
+
+        // Realistic colo revenue assumptions (what customers pay)
+        const coloRatePerKW = 1200 // €1,200/kW/month (realistic colo pricing)
+        const bandwidthRate = 80 // €80/Gbps/month (bandwidth pricing)
+        const crossConnectRate = 300 // €300/month (cross-connect fees)
+        const compliancePct = 0.20 // 20% overhead (compliance, security, etc.)
+
+        // Calculate local demand for this site's county
+        const localDemand = formSubmissions.reduce((acc, submission) =>
+        {
+            const location = submission.eircode || submission.location || 'Dublin'
+            const county = extractCountyFromLocation(location)
+            if (county === site.county)
+            {
+                return acc + (parseFloat(submission.current_it_load) || 0)
+            }
+            return acc
+        }, 0)
+
+        // CapEx calculations (for 1MW facility)
+        const facilitySizeKW = 1000 // 1MW
+        const baseCapex = capexPerKW * facilitySizeKW
+        const softCosts = baseCapex * softCostsPct
+        const totalCapex = baseCapex + softCosts
+
+        // OpEx calculations (annual)
+        const energyCost = (facilitySizeKW * pue * energyPrice * 8760) / 1000 // Convert to MWh
+        const maintenanceCost = totalCapex * maintPct
+        const totalOpex = energyCost + staffingPerYr + maintenanceCost + insurancePerYr
+
+        // Revenue calculations (based on local demand and realistic utilization)
+        const demandFactor = Math.min(1.0, localDemand / (facilitySizeKW * 0.5)) // Scale based on local demand
+        const utilizationRate = Math.min(0.85, 0.3 + (demandFactor * 0.5)) // 30-85% utilization based on demand
+        const coloRevenue = (facilitySizeKW * utilizationRate * coloRatePerKW * 12) * (1 + compliancePct)
+        const bandwidthRevenue = (facilitySizeKW * utilizationRate * 0.2 * bandwidthRate * 12) // 20% of capacity needs bandwidth
+        const crossConnectRevenue = crossConnectRate * 12 * Math.ceil(utilizationRate * 5) // 1 cross-connect per 200kW
+        const totalRevenue = coloRevenue + bandwidthRevenue + crossConnectRevenue
+
+        // ROI calculations
+        const annualProfit = totalRevenue - totalOpex
+        const paybackPeriod = totalCapex / Math.max(annualProfit, 1) // Avoid division by zero
+        const roi = ((annualProfit * 10) - totalCapex) / totalCapex * 100 // 10-year ROI
+
+        return {
+            capexPerKW,
+            totalCapex: Math.round(totalCapex),
+            softCosts: Math.round(softCosts),
+            energyCost: Math.round(energyCost),
+            staffingCost: staffingPerYr,
+            maintenanceCost: Math.round(maintenanceCost),
+            insuranceCost: insurancePerYr,
+            totalOpex: Math.round(totalOpex),
+            localDemand,
+            revenuePotential: Math.round(totalRevenue),
+            paybackPeriod: Math.round(paybackPeriod * 10) / 10,
+            roi: Math.round(roi)
+        }
+    }
+
     return (
         <PasscodeProtection
             correctPasscode="harsha@esb.ie"
@@ -1328,14 +1403,14 @@ function Sites()
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             {getTopCandidateSites().map((site, index) => (
                                                 <div key={site.name} className={`rounded-lg p-6 ${index === 0 ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300' :
-                                                        index === 1 ? 'bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-300' :
-                                                            'bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300'
+                                                    index === 1 ? 'bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-300' :
+                                                        'bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300'
                                                     }`}>
                                                     <div className="flex items-center justify-between mb-4">
                                                         <h4 className="text-lg font-bold text-gray-900">{site.name}</h4>
                                                         <div className={`px-3 py-1 rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-200 text-yellow-800' :
-                                                                index === 1 ? 'bg-gray-200 text-gray-800' :
-                                                                    'bg-orange-200 text-orange-800'
+                                                            index === 1 ? 'bg-gray-200 text-gray-800' :
+                                                                'bg-orange-200 text-orange-800'
                                                             }`}>
                                                             #{index + 1}
                                                         </div>
@@ -1440,6 +1515,153 @@ function Sites()
                                                             <span className="font-medium">8% (weighted average cost of capital)</span>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* CapEx/OpEx Estimate Component */}
+                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">CapEx/OpEx Estimates</h2>
+                            <p className="text-gray-600 mb-6">
+                                Financial projections for each recommended site based on local demand and cost assumptions
+                            </p>
+
+                            {formSubmissions.length === 0 && surveySubmissions.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <p>Not enough data for financial estimates yet.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Top 3 Sites Financial Analysis */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {getTopCandidateSites().map((site, index) =>
+                                        {
+                                            const financials = calculateSiteFinancials(site)
+                                            return (
+                                                <div key={site.name} className="bg-white border-2 border-gray-200 rounded-lg p-6">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h3 className="text-lg font-bold text-gray-900">{site.name}</h3>
+                                                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-200 text-yellow-800' :
+                                                            index === 1 ? 'bg-gray-200 text-gray-800' :
+                                                                'bg-orange-200 text-orange-800'
+                                                            }`}>
+                                                            #{index + 1}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        {/* CapEx Breakdown */}
+                                                        <div className="bg-blue-50 rounded-lg p-4">
+                                                            <h4 className="font-semibold text-blue-900 mb-3">Capital Expenditure</h4>
+                                                            <div className="space-y-2 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-blue-700">Build Cost per kW</span>
+                                                                    <span className="font-medium">€{financials.capexPerKW.toLocaleString()}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-blue-700">Total CapEx (1MW)</span>
+                                                                    <span className="font-medium">€{financials.totalCapex.toLocaleString()}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-blue-700">Soft Costs (25%)</span>
+                                                                    <span className="font-medium">€{financials.softCosts.toLocaleString()}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* OpEx Breakdown */}
+                                                        <div className="bg-green-50 rounded-lg p-4">
+                                                            <h4 className="font-semibold text-green-900 mb-3">Annual Operating Costs</h4>
+                                                            <div className="space-y-2 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-green-700">Energy (1MW @ €80/MWh)</span>
+                                                                    <span className="font-medium">€{financials.energyCost.toLocaleString()}/yr</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-green-700">Staffing</span>
+                                                                    <span className="font-medium">€{financials.staffingCost.toLocaleString()}/yr</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-green-700">Maintenance</span>
+                                                                    <span className="font-medium">€{financials.maintenanceCost.toLocaleString()}/yr</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-green-700">Insurance</span>
+                                                                    <span className="font-medium">€{financials.insuranceCost.toLocaleString()}/yr</span>
+                                                                </div>
+                                                                <div className="border-t pt-2">
+                                                                    <div className="flex justify-between font-semibold">
+                                                                        <span className="text-green-800">Total OpEx</span>
+                                                                        <span className="text-green-900">€{financials.totalOpex.toLocaleString()}/yr</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* ROI Analysis */}
+                                                        <div className="bg-purple-50 rounded-lg p-4">
+                                                            <h4 className="font-semibold text-purple-900 mb-3">ROI Analysis</h4>
+                                                            <div className="space-y-2 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-purple-700">Local Demand</span>
+                                                                    <span className="font-medium">{financials.localDemand.toFixed(1)} kW</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-purple-700">Revenue Potential</span>
+                                                                    <span className="font-medium">€{financials.revenuePotential.toLocaleString()}/yr</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-purple-700">Payback Period</span>
+                                                                    <span className="font-medium">{financials.paybackPeriod} years</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-purple-700">ROI (10 years)</span>
+                                                                    <span className="font-medium">{financials.roi}%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* Cost Assumptions Reference */}
+                                    <div className="bg-gray-50 rounded-lg p-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Assumptions Reference</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Data Center Build Costs</h4>
+                                                <div className="space-y-1 text-sm text-gray-600">
+                                                    <div>CapEx: €8,000/kW (modular design)</div>
+                                                    <div>Soft Costs: 20% of CapEx</div>
+                                                    <div>Maintenance: 2% of CapEx/year</div>
+                                                    <div>Staffing: €180,000/year (2-3 staff)</div>
+                                                    <div>Insurance: €25,000/year</div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Energy & Operations</h4>
+                                                <div className="space-y-1 text-sm text-gray-600">
+                                                    <div>Energy: €120/MWh (Irish rates)</div>
+                                                    <div>PUE: 1.3 (efficient design)</div>
+                                                    <div>WACC: 8%</div>
+                                                    <div>Depreciation: 5 years</div>
+                                                    <div>Hours/Year: 8,760</div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-2">Revenue Assumptions</h4>
+                                                <div className="space-y-1 text-sm text-gray-600">
+                                                    <div>Colo Rate: €1,200/kW/month</div>
+                                                    <div>Bandwidth: €80/Gbps/month</div>
+                                                    <div>Cross-connect: €300/month</div>
+                                                    <div>Compliance: +20% overhead</div>
+                                                    <div>Utilization: 30-85% (demand-based)</div>
                                                 </div>
                                             </div>
                                         </div>
