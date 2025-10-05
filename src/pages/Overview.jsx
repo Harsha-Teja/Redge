@@ -86,6 +86,10 @@ const DATA_CENTRE_SERVICES = [
 
 export default function Overview()
 {
+    // Wind farm data state
+    const [windFarmData, setWindFarmData] = useState([])
+    const [isLoadingWindFarms, setIsLoadingWindFarms] = useState(true)
+
     const [formData, setFormData] = useState({
         // Company Information
         companyName: '',
@@ -192,6 +196,55 @@ export default function Overview()
             .catch(error => console.error('Error loading locations:', error))
     }, [])
 
+    // Load wind farm data from windfarms.geojson
+    useEffect(() =>
+    {
+        const loadWindFarmData = async () =>
+        {
+            try
+            {
+                const response = await fetch('/data/windfarms.geojson')
+                if (response.ok)
+                {
+                    const data = await response.json()
+                    // Parse the wind farm data - data comes as objects with numeric keys
+                    const windFarms = []
+                    const windFarmNames = data.Windfarm_Name
+                    const counties = data.County
+                    const capacities = data.MEC__MW_
+                    const latitudes = data.lat
+                    const longitudes = data.lon
+
+                    // Get the number of wind farms from the first property
+                    const numWindFarms = Object.keys(windFarmNames).length
+
+                    for (let i = 0; i < numWindFarms; i++)
+                    {
+                        windFarms.push({
+                            name: windFarmNames[i],
+                            county: counties[i],
+                            capacity: capacities[i],
+                            lat: latitudes[i],
+                            lon: longitudes[i]
+                        })
+                    }
+                    setWindFarmData(windFarms)
+                    setIsLoadingWindFarms(false)
+                } else
+                {
+                    console.error('Failed to load wind farm data')
+                    setIsLoadingWindFarms(false)
+                }
+            } catch (error)
+            {
+                console.error('Error loading wind farm data:', error)
+                setIsLoadingWindFarms(false)
+            }
+        }
+
+        loadWindFarmData()
+    }, [])
+
     // Close dropdown when clicking outside
     useEffect(() =>
     {
@@ -283,6 +336,40 @@ export default function Overview()
                 popupAnchor: [0, -10]
             })
             return redMarker
+        } catch (error)
+        {
+            // Fallback to default marker if custom marker fails
+            return new L.Icon.Default()
+        }
+    }
+
+    // Create wind farm icon
+    function createWindFarmIcon(capacity)
+    {
+        try
+        {
+            const size = Math.max(12, Math.min(24, capacity / 10)) // Scale icon size based on capacity
+            const windFarmIcon = L.divIcon({
+                className: 'wind-farm-icon',
+                html: `<div style="
+                    background-color: #10B981;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: ${Math.max(8, size - 4)}px;
+                ">🌬️</div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                popupAnchor: [0, -size / 2]
+            })
+            return windFarmIcon
         } catch (error)
         {
             // Fallback to default marker if custom marker fails
@@ -707,6 +794,19 @@ export default function Overview()
                         {/* Map Container */}
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 relative z-0">
                             <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Ireland Map</h3>
+                            {isLoadingWindFarms && (
+                                <div className="text-center text-sm text-gray-500 mb-2">Loading wind farms...</div>
+                            )}
+                            {/* {!isLoadingWindFarms && windFarmData.length > 0 && (
+                                <div className="text-center text-sm text-green-600 mb-2">
+                                    {windFarmData.length} wind farms loaded
+                                </div>
+                            )} */}
+                            {!isLoadingWindFarms && windFarmData.length === 0 && (
+                                <div className="text-center text-sm text-red-600 mb-2">
+                                    No wind farm data loaded
+                                </div>
+                            )}
                             <div className="w-full rounded-lg border border-gray-200 shadow-inner overflow-hidden relative z-0">
                                 <MapContainer
                                     center={[53.4, -7.9]}
@@ -740,6 +840,31 @@ export default function Overview()
                                                 </div>
                                             </Popup>
                                         </Marker>
+                                    )}
+                                    {/* Wind Farm Markers */}
+                                    {!isLoadingWindFarms && windFarmData.length > 0 && (
+                                        <>
+                                            {windFarmData.slice(0, 20).map((windFarm, index) => (
+                                                <Marker
+                                                    key={index}
+                                                    position={[windFarm.lat, windFarm.lon]}
+                                                    icon={createWindFarmIcon(windFarm.capacity)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">🌬️</span>
+                                                                <b className="text-green-700">{windFarm.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>County:</strong> {windFarm.county}</div>
+                                                                <div><strong>Capacity:</strong> {windFarm.capacity} MW</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
                                     )}
                                 </MapContainer>
                             </div>

@@ -27,6 +27,40 @@ const createCustomIcon = (color) => new L.DivIcon({
     iconAnchor: [10, 10]
 })
 
+// Create wind farm icon
+const createWindFarmIcon = (capacity) =>
+{
+    try
+    {
+        const size = Math.max(12, Math.min(24, capacity / 10)) // Scale icon size based on capacity
+        const windFarmIcon = L.divIcon({
+            className: 'wind-farm-icon',
+            html: `<div style="
+                background-color: #10B981;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: ${Math.max(8, size - 4)}px;
+            ">🌬️</div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+            popupAnchor: [0, -size / 2]
+        })
+        return windFarmIcon
+    } catch (error)
+    {
+        // Fallback to default marker if custom marker fails
+        return new L.Icon.Default()
+    }
+}
+
 // County coordinates for Ireland
 const COUNTY_COORDINATES = {
     'Dublin': [53.3498, -6.2603],
@@ -69,6 +103,10 @@ function Sites()
     const [error, setError] = useState(null)
     const [contactError, setContactError] = useState(null)
     const [surveyError, setSurveyError] = useState(null)
+
+    // Wind farm data state
+    const [windFarmData, setWindFarmData] = useState([])
+    const [isLoadingWindFarms, setIsLoadingWindFarms] = useState(true)
 
     /**
      * Fetches contact-lead form submissions from Supabase
@@ -175,6 +213,55 @@ function Sites()
         fetchFormSubmissionsData()
         fetchContactSubmissionsData()
         fetchSurveySubmissionsData()
+    }, [])
+
+    // Load wind farm data from windfarms.geojson
+    useEffect(() =>
+    {
+        const loadWindFarmData = async () =>
+        {
+            try
+            {
+                const response = await fetch('/data/windfarms.geojson')
+                if (response.ok)
+                {
+                    const data = await response.json()
+                    // Parse the wind farm data - data comes as objects with numeric keys
+                    const windFarms = []
+                    const windFarmNames = data.Windfarm_Name
+                    const counties = data.County
+                    const capacities = data.MEC__MW_
+                    const latitudes = data.lat
+                    const longitudes = data.lon
+
+                    // Get the number of wind farms from the first property
+                    const numWindFarms = Object.keys(windFarmNames).length
+
+                    for (let i = 0; i < numWindFarms; i++)
+                    {
+                        windFarms.push({
+                            name: windFarmNames[i],
+                            county: counties[i],
+                            capacity: capacities[i],
+                            lat: latitudes[i],
+                            lon: longitudes[i]
+                        })
+                    }
+                    setWindFarmData(windFarms)
+                    setIsLoadingWindFarms(false)
+                } else
+                {
+                    console.error('Failed to load wind farm data')
+                    setIsLoadingWindFarms(false)
+                }
+            } catch (error)
+            {
+                console.error('Error loading wind farm data:', error)
+                setIsLoadingWindFarms(false)
+            }
+        }
+
+        loadWindFarmData()
     }, [])
 
     /**
@@ -618,6 +705,32 @@ function Sites()
                                             </Popup>
                                         </Marker>
                                     ))}
+
+                                    {/* Wind Farm Markers */}
+                                    {!isLoadingWindFarms && windFarmData.length > 0 && (
+                                        <>
+                                            {windFarmData.slice(0, 20).map((windFarm, index) => (
+                                                <Marker
+                                                    key={`windfarm-${index}`}
+                                                    position={[windFarm.lat, windFarm.lon]}
+                                                    icon={createWindFarmIcon(windFarm.capacity)}
+                                                >
+                                                    <Popup>
+                                                        <div className="p-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-lg">🌬️</span>
+                                                                <b className="text-green-700">{windFarm.name}</b>
+                                                            </div>
+                                                            <div className="text-sm text-gray-600">
+                                                                <div><strong>County:</strong> {windFarm.county}</div>
+                                                                <div><strong>Capacity:</strong> {windFarm.capacity} MW</div>
+                                                            </div>
+                                                        </div>
+                                                    </Popup>
+                                                </Marker>
+                                            ))}
+                                        </>
+                                    )}
                                 </MapContainer>
                             </div>
 
