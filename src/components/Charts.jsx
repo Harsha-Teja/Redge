@@ -6,19 +6,19 @@
 
 import React from 'react'
 import
-    {
-        Chart as ChartJS,
-        CategoryScale,
-        LinearScale,
-        BarElement,
-        Title,
-        Tooltip,
-        Legend,
-        ArcElement,
-        PointElement,
-        LineElement,
-        Filler
-    } from 'chart.js'
+{
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    ArcElement,
+    PointElement,
+    LineElement,
+    Filler
+} from 'chart.js'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 
 // Register Chart.js components

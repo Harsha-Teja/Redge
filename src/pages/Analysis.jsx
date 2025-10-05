@@ -21,6 +21,7 @@ import
     CarbonEmissionsAvoidedChart,
     PipelineVsDemandChart
 } from '../components/Charts.jsx'
+import { InfrastructureCostCalculator } from '../components/InfrastructureCostCalculator.jsx'
 import { fetchFormSubmissions, fetchSurveySubmissions } from '../lib/supabase.js'
 
 function Analysis()
@@ -216,7 +217,10 @@ function Analysis()
                             </div>
                         )}
 
-
+                        {/* Infrastructure Cost Calculator Section */}
+                        <div className="mb-12">
+                            <InfrastructureCostCalculator />
+                        </div>
 
                     </div>
                 </div>
