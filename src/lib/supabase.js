@@ -19,49 +19,6 @@ if (!supabaseUrl || !supabaseAnonKey)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 /**
- * Test Supabase connection
- * @returns {Promise<Object>} - Result object with connection status
- */
-export const testSupabaseConnection = async () =>
-{
-    try
-    {
-        console.log('Testing Supabase connection...')
-        console.log('URL:', supabaseUrl)
-        console.log('Key present:', !!supabaseAnonKey)
-
-        // Test connection by trying to fetch from the table
-        const { data, error } = await supabase
-            .from('form_submissions_customer')
-            .select('count')
-            .limit(1)
-
-        if (error)
-        {
-            console.error('Supabase connection test failed:', error)
-            return {
-                success: false,
-                error: error.message,
-                details: error
-            }
-        }
-
-        console.log('Supabase connection test successful')
-        return {
-            success: true,
-            message: 'Connection successful'
-        }
-    } catch (error)
-    {
-        console.error('Supabase connection test error:', error)
-        return {
-            success: false,
-            error: error.message
-        }
-    }
-}
-
-/**
  * Submits form data to Supabase
  * @param {Object} formData - The form data to submit
  * @returns {Promise<Object>} - Result object with success status and data/error
