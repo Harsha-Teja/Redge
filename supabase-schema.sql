@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS form_submissions_customer (
     mic_limit TEXT,
     existing_load TEXT,
     location TEXT,
+    budget_range TEXT,
+    commercial_model TEXT,
+    backup_dr TEXT,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

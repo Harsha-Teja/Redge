@@ -1,15 +1,24 @@
 /**
- * Sites page for ReDge - Data center sites and locations
- * Shows information about various data center sites across Ireland
+ * Modular DC Analysis page for ReDge - Comprehensive data center feasibility analysis
+ * Provides interactive maps, feasibility scoring, and analytical charts for customer submissions
  * Protected by passcode authentication
- * Displays contact-lead form submissions in a table format
+ * Displays form submissions with location-based analysis and financial feasibility calculations
  */
 import { useState, useEffect } from 'react'
-import { fetchFormSubmissions, fetchContactSubmissions, fetchSurveySubmissions } from '../lib/supabase.js'
+import { fetchFormSubmissions, fetchContactSubmissions } from '../lib/supabase.js'
 import PasscodeProtection from '../components/PasscodeProtection.jsx'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import
+{
+    DemandTypeVsPowerChart,
+    RegionalHeatMapChart,
+    SustainabilityTargetsChart,
+    ServiceDemandMixChart,
+    TierPreferenceChart,
+    BudgetVsLoadChart
+} from '../components/Charts.jsx'
 
 // Fix for default markers in React
 delete L.Icon.Default.prototype._getIconUrl
@@ -157,18 +166,333 @@ const COUNTY_COORDINATES = {
     'Donegal': [54.6541, -8.1047]
 }
 
-function Sites()
+/**
+ * Feasibility Results Component
+ * Calculates and displays feasibility study results for a selected customer
+ */
+const FeasibilityResults = ({ customerData }) =>
+{
+    // Default parameters
+    const DEFAULTS = {
+        capexPerMW: 9000000, // €9M per MW for Tier III modular
+        pue: 1.4,
+        elecPrice: 120, // €120/MWh
+        discountRate: 0.08, // 8%
+        targetIRR: 0.10, // 10%
+        targetPayback: 7, // 7 years
+        pricePerKWMonth: 250, // €250/kW/month
+        taxRate: 0.25, // 25%
+        sustainingCapexRate: 0.005 // 0.5% of CapEx
+    }
+
+    // Extract customer data with defaults
+    const itLoadKW = parseFloat(customerData.current_it_load) || 0
+    const tier = customerData.availability_tier || 'Tier III'
+    const gpuShare = parseFloat(customerData.gpu_ai_share) || 0
+    const renewableTarget = parseFloat(customerData.renewable_target) || 0
+    const commercialModel = customerData.commercial_model || 'Lease'
+    const contractTerm = parseInt(customerData.contract_term) || 5
+    const micLimit = parseFloat(customerData.mic_limit) || 0
+    const existingLoad = parseFloat(customerData.existing_load) || 0
+    const backupDR = customerData.backup_dr || 'No - Not required'
+
+    // 1️⃣ Power Capacity Conversion
+    const powerMW = itLoadKW / 1000
+
+    // 2️⃣ Base Capital Cost (CapEx)
+    const capexBase = powerMW * DEFAULTS.capexPerMW
+
+    // 3️⃣ Design Adjustments (multipliers)
+    const tierMultiplier = tier === 'Tier II' ? 1.10 : tier === 'Tier III' ? 1.00 : tier === 'Tier IV' ? 1.20 : 1.00
+    const gpuMultiplier = gpuShare > 30 ? 1.15 : 1.00
+    const renewableMultiplier = renewableTarget >= 80 ? 1.05 : 1.00
+    const drMultiplier = backupDR === 'Yes - Required' ? 1.9 : 1.00
+
+    const capex = capexBase * tierMultiplier * gpuMultiplier * renewableMultiplier * drMultiplier
+
+    // 4️⃣ Yearly Energy Consumption
+    const energyMWhYr = powerMW * DEFAULTS.pue * 8760
+
+    // 5️⃣ Energy Cost
+    const energyDiscount = renewableTarget >= 80 ? 0.95 : 1.00
+    const energyCostYr = energyMWhYr * DEFAULTS.elecPrice * energyDiscount
+
+    // 6️⃣ Operating Expenses (OpEx)
+    const opexYr = energyCostYr + capex * (0.02 + 0.03 + 0.005) // energy + 2% maintenance + 3% staff + 0.5% insurance
+
+    // 7️⃣ Annual Revenue
+    const serviceMultiplier = commercialModel === 'Managed Service' ? 1.20 : commercialModel === 'Own' ? 0 : 1.00
+    const utilizationFactor = 0.7 // Default 70% utilization
+    const revenueYr = itLoadKW * DEFAULTS.pricePerKWMonth * 12 * utilizationFactor * serviceMultiplier
+
+    // 8️⃣ EBITDA (Operating Profit)
+    const ebitda = revenueYr - opexYr
+
+    // 9️⃣ Free Cash Flow (FCF) calculation
+    const calculateFCF = (year) =>
+    {
+        if (year === 0) return -capex
+        const sustainingCapex = capex * DEFAULTS.sustainingCapexRate
+        return ebitda * (1 - DEFAULTS.taxRate) - sustainingCapex
+    }
+
+    // 🔟 Net Present Value (NPV)
+    const calculateNPV = () =>
+    {
+        let npv = -capex // Year 0
+        for (let t = 1; t <= contractTerm; t++)
+        {
+            const fcf = calculateFCF(t)
+            npv += fcf / Math.pow(1 + DEFAULTS.discountRate, t)
+        }
+        return npv
+    }
+    const npv = calculateNPV()
+
+    // 1️⃣1️⃣ Internal Rate of Return (IRR) - Simplified calculation
+    const calculateIRR = () =>
+    {
+        // Simplified IRR calculation using approximation
+        let irr = 0.08 // Start with discount rate
+        let npvAtIRR = 0
+        let iterations = 0
+        const maxIterations = 100
+
+        while (Math.abs(npvAtIRR) > 1000 && iterations < maxIterations)
+        {
+            npvAtIRR = -capex
+            for (let t = 1; t <= contractTerm; t++)
+            {
+                const fcf = calculateFCF(t)
+                npvAtIRR += fcf / Math.pow(1 + irr, t)
+            }
+            irr += npvAtIRR > 0 ? 0.01 : -0.01
+            iterations++
+        }
+        return Math.max(0, Math.min(1, irr)) // Clamp between 0% and 100%
+    }
+    const irr = calculateIRR()
+
+    // 1️⃣2️⃣ Payback Period
+    const calculatePaybackPeriod = () =>
+    {
+        let cumulativeFCF = -capex
+        for (let year = 1; year <= contractTerm; year++)
+        {
+            cumulativeFCF += calculateFCF(year)
+            if (cumulativeFCF >= 0) return year
+        }
+        return contractTerm + 1 // Never pays back within contract term
+    }
+    const paybackPeriod = calculatePaybackPeriod()
+
+    // 1️⃣3️⃣ Feasibility Flag
+    const isFeasible = irr >= DEFAULTS.targetIRR && paybackPeriod <= DEFAULTS.targetPayback
+
+    // 1️⃣4️⃣ Grid Check
+    const gridOK = powerMW <= (micLimit - existingLoad)
+
+    return (
+        <div className="space-y-8">
+            {/* Key Metrics Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-blue-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-2">Power Capacity</h3>
+                    <p className="text-3xl font-bold text-blue-600">{powerMW.toFixed(2)} MW</p>
+                    <p className="text-sm text-blue-700 mt-1">Converts {itLoadKW} kW to megawatts</p>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-green-900 mb-2">Total CapEx</h3>
+                    <p className="text-3xl font-bold text-green-600">€{(capex / 1000000).toFixed(1)}M</p>
+                    <p className="text-sm text-green-700 mt-1">Build cost with adjustments</p>
+                </div>
+
+                <div className="bg-purple-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-purple-900 mb-2">IRR</h3>
+                    <p className="text-3xl font-bold text-purple-600">{(irr * 100).toFixed(1)}%</p>
+                    <p className="text-sm text-purple-700 mt-1">Internal Rate of Return</p>
+                </div>
+
+                <div className="bg-orange-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-orange-900 mb-2">Payback</h3>
+                    <p className="text-3xl font-bold text-orange-600">{paybackPeriod} years</p>
+                    <p className="text-sm text-orange-700 mt-1">Time to break even</p>
+                </div>
+            </div>
+
+            {/* Feasibility Status */}
+            <div className={`rounded-lg p-6 ${isFeasible ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className={`text-xl font-bold ${isFeasible ? 'text-green-900' : 'text-red-900'}`}>
+                            {isFeasible ? '✅ Feasible Project' : '❌ Not Feasible'}
+                        </h3>
+                        <p className={`text-sm ${isFeasible ? 'text-green-700' : 'text-red-700'} mt-1`}>
+                            {isFeasible
+                                ? `IRR ${(irr * 100).toFixed(1)}% ≥ 10% and Payback ${paybackPeriod} years ≤ 7 years`
+                                : `IRR ${(irr * 100).toFixed(1)}% < 10% or Payback ${paybackPeriod} years > 7 years`
+                            }
+                        </p>
+                    </div>
+                    <div className={`px-4 py-2 rounded-full text-sm font-semibold ${isFeasible ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
+                        {isFeasible ? 'APPROVED' : 'REJECTED'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Grid Check */}
+            <div className={`rounded-lg p-6 ${gridOK ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className={`text-lg font-semibold ${gridOK ? 'text-green-900' : 'text-red-900'}`}>
+                            {gridOK ? '✅ Grid Capacity Available' : '❌ Insufficient Grid Capacity'}
+                        </h3>
+                        <p className={`text-sm ${gridOK ? 'text-green-700' : 'text-red-700'} mt-1`}>
+                            {gridOK
+                                ? `Required ${powerMW.toFixed(2)} MW ≤ Available ${(micLimit - existingLoad).toFixed(2)} MW`
+                                : `Required ${powerMW.toFixed(2)} MW > Available ${(micLimit - existingLoad).toFixed(2)} MW`
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Detailed Financial Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Capital Expenditure Breakdown */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Capital Expenditure</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Base Cost ({powerMW.toFixed(2)} MW × €9M)</span>
+                            <span className="font-medium">€{(capexBase / 1000000).toFixed(1)}M</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Tier Adjustment ({tier})</span>
+                            <span className="font-medium">×{tierMultiplier.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">GPU Cooling ({gpuShare}%)</span>
+                            <span className="font-medium">×{gpuMultiplier.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Renewable ({renewableTarget}%)</span>
+                            <span className="font-medium">×{renewableMultiplier.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">DR Sites ({backupDR})</span>
+                            <span className="font-medium">×{drMultiplier.toFixed(2)}</span>
+                        </div>
+                        <div className="border-t pt-2">
+                            <div className="flex justify-between font-semibold text-lg">
+                                <span>Total CapEx</span>
+                                <span>€{(capex / 1000000).toFixed(1)}M</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Operating Expenses Breakdown */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Annual Operating Costs</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Energy Cost</span>
+                            <span className="font-medium">€{(energyCostYr / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Maintenance (2%)</span>
+                            <span className="font-medium">€{((capex * 0.02) / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Staff (3%)</span>
+                            <span className="font-medium">€{((capex * 0.03) / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Insurance (0.5%)</span>
+                            <span className="font-medium">€{((capex * 0.005) / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="border-t pt-2">
+                            <div className="flex justify-between font-semibold text-lg">
+                                <span>Total OpEx</span>
+                                <span>€{(opexYr / 1000).toFixed(0)}K</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Revenue and Profitability */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analysis</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">IT Load</span>
+                            <span className="font-medium">{itLoadKW} kW</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Monthly Rate</span>
+                            <span className="font-medium">€{DEFAULTS.pricePerKWMonth}/kW</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Utilization</span>
+                            <span className="font-medium">{(utilizationFactor * 100).toFixed(0)}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Service Model</span>
+                            <span className="font-medium">{commercialModel}</span>
+                        </div>
+                        <div className="border-t pt-2">
+                            <div className="flex justify-between font-semibold text-lg">
+                                <span>Annual Revenue</span>
+                                <span>€{(revenueYr / 1000).toFixed(0)}K</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Metrics</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">EBITDA</span>
+                            <span className="font-medium">€{(ebitda / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">NPV (8% discount)</span>
+                            <span className="font-medium">€{(npv / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">IRR</span>
+                            <span className="font-medium">{(irr * 100).toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Payback Period</span>
+                            <span className="font-medium">{paybackPeriod} years</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Contract Term</span>
+                            <span className="font-medium">{contractTerm} years</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function ModularDCAnalysis()
 {
     // State for managing form submissions data
     const [formSubmissions, setFormSubmissions] = useState([])
     const [contactSubmissions, setContactSubmissions] = useState([])
-    const [surveySubmissions, setSurveySubmissions] = useState([])
     const [loading, setLoading] = useState(true)
     const [contactLoading, setContactLoading] = useState(true)
-    const [surveyLoading, setSurveyLoading] = useState(true)
     const [error, setError] = useState(null)
     const [contactError, setContactError] = useState(null)
-    const [surveyError, setSurveyError] = useState(null)
+    const [selectedCompany, setSelectedCompany] = useState(null)
 
     // Wind farm data state
     const [windFarmData, setWindFarmData] = useState([])
@@ -245,45 +569,12 @@ function Sites()
         }
     }
 
-    /**
-     * Fetches survey form submissions from Supabase
-     * This function retrieves all survey form submissions from the database
-     */
-    const fetchSurveySubmissionsData = async () =>
-    {
-        try
-        {
-            setSurveyLoading(true)
-            setSurveyError(null)
-
-            console.log('Fetching survey submissions from Supabase...')
-            const result = await fetchSurveySubmissions()
-
-            if (result.success)
-            {
-                console.log('Survey submissions fetched successfully:', result.submissions)
-                setSurveySubmissions(result.submissions || [])
-            } else
-            {
-                console.error('Error fetching survey submissions:', result.error)
-                setSurveyError(`Failed to load survey submissions: ${result.error}`)
-            }
-        } catch (err)
-        {
-            console.error('Error fetching survey submissions:', err)
-            setSurveyError(`Failed to load survey submissions: ${err.message}`)
-        } finally
-        {
-            setSurveyLoading(false)
-        }
-    }
 
     // Fetch form submissions when component mounts
     useEffect(() =>
     {
         fetchFormSubmissionsData()
         fetchContactSubmissionsData()
-        fetchSurveySubmissionsData()
     }, [])
 
     // Load wind farm data from windfarms.geojson
@@ -408,19 +699,77 @@ function Sites()
     }
 
     /**
-     * Process submissions to create map markers with clustering
+     * Calculate feasibility score for a customer submission
+     * @param {Object} submission - Customer submission data
+     * @returns {Object} Feasibility score and details
+     */
+    const calculateFeasibilityScore = (submission) =>
+    {
+        const itLoadKW = parseFloat(submission.current_it_load) || 0
+        const tier = submission.availability_tier || 'Tier III'
+        const gpuShare = parseFloat(submission.gpu_ai_share) || 0
+        const renewableTarget = parseFloat(submission.renewable_target) || 0
+        const commercialModel = submission.commercial_model || 'Lease'
+        const contractTerm = parseInt(submission.contract_term) || 5
+        const micLimit = parseFloat(submission.mic_limit) || 0
+        const existingLoad = parseFloat(submission.existing_load) || 0
+        const backupDR = submission.backup_dr || 'No - Not required'
+
+        // Basic feasibility calculation (simplified)
+        const powerMW = itLoadKW / 1000
+        const capexPerMW = 9000000
+        const tierMultiplier = tier === 'Tier II' ? 1.10 : tier === 'Tier III' ? 1.00 : tier === 'Tier IV' ? 1.20 : 1.00
+        const gpuMultiplier = gpuShare > 30 ? 1.15 : 1.00
+        const renewableMultiplier = renewableTarget >= 80 ? 1.05 : 1.00
+        const drMultiplier = backupDR === 'Yes - Required' ? 1.9 : 1.00
+
+        const capex = powerMW * capexPerMW * tierMultiplier * gpuMultiplier * renewableMultiplier * drMultiplier
+        const revenue = itLoadKW * 250 * 12 * 0.7 * (commercialModel === 'Managed Service' ? 1.20 : 1.00)
+        const opex = powerMW * 1.4 * 8760 * 120 * 0.95 + capex * 0.055 // Simplified OpEx calculation
+        const ebitda = revenue - opex
+
+        // Simple feasibility score (0-100)
+        let score = 50 // Base score
+
+        // Adjust based on financials
+        if (ebitda > 0) score += 20
+        if (capex < 10000000) score += 15 // Lower CapEx is better
+        if (contractTerm >= 7) score += 10 // Longer contracts are better
+        if (renewableTarget >= 80) score += 10 // Green energy bonus
+        if (gpuShare > 30) score -= 10 // High GPU requirements reduce feasibility
+        if (backupDR === 'Yes - Required') score -= 15 // DR requirement reduces feasibility
+
+        // Grid capacity check
+        const gridOK = powerMW <= (micLimit - existingLoad)
+        if (!gridOK) score -= 30
+
+        // Clamp score between 0 and 100
+        score = Math.max(0, Math.min(100, score))
+
+        return {
+            score: Math.round(score),
+            capex: Math.round(capex / 1000000), // In millions
+            ebitda: Math.round(ebitda / 1000), // In thousands
+            gridOK,
+            powerMW: powerMW.toFixed(2)
+        }
+    }
+
+    /**
+     * Process submissions to create map markers (only customer leads, no contact forms)
      * @returns {Array} Array of map markers with coordinates and submission data
      */
     const processSubmissionsForMap = () =>
     {
         const mapData = []
 
-        // Process customer lead submissions
+        // Process only customer lead submissions (remove contact form processing)
         formSubmissions.forEach((submission, index) =>
         {
             const location = submission.location || submission.eircode || 'Dublin'
             const county = extractCountyFromLocation(location)
             const coordinates = COUNTY_COORDINATES[county] || COUNTY_COORDINATES['Dublin']
+            const feasibility = calculateFeasibilityScore(submission)
 
             mapData.push({
                 id: `customer-${submission.id}`,
@@ -428,47 +777,12 @@ function Sites()
                 coordinates,
                 county,
                 submission,
-                color: '#3B82F6' // Blue for customer leads
+                feasibility,
+                color: feasibility.score >= 70 ? '#10B981' : feasibility.score >= 40 ? '#F59E0B' : '#EF4444' // Green/Orange/Red based on feasibility
             })
         })
 
-        // Process contact submissions
-        contactSubmissions.forEach((submission, index) =>
-        {
-            const location = 'Dublin' // Contact form doesn't have location, default to Dublin
-            const county = 'Dublin'
-            const coordinates = COUNTY_COORDINATES[county]
-
-            mapData.push({
-                id: `contact-${submission.id}`,
-                type: 'contact',
-                coordinates,
-                county,
-                submission,
-                color: '#10B981' // Green for contact forms
-            })
-        })
-
-        // Process survey submissions
-        surveySubmissions.forEach((submission, index) =>
-        {
-            const location = 'Dublin' // Survey form doesn't have location, default to Dublin
-            const county = 'Dublin'
-            const coordinates = COUNTY_COORDINATES[county]
-
-            mapData.push({
-                id: `survey-${submission.id}`,
-                type: 'survey',
-                coordinates,
-                county,
-                submission,
-                color: '#8B5CF6' // Purple for surveys
-            })
-        })
-
-        // Cluster submissions by county
-        const clusteredData = clusterSubmissionsByCounty(mapData)
-        return clusteredData
+        return mapData
     }
 
     /**
@@ -491,42 +805,6 @@ function Sites()
         return 'Dublin' // Default to Dublin
     }
 
-    /**
-     * Cluster submissions by county
-     * @param {Array} submissions - Array of submission data
-     * @returns {Array} Clustered submission data
-     */
-    const clusterSubmissionsByCounty = (submissions) =>
-    {
-        const countyMap = new Map()
-
-        submissions.forEach(submission =>
-        {
-            const key = `${submission.coordinates[0]},${submission.coordinates[1]}`
-            if (!countyMap.has(key))
-            {
-                countyMap.set(key, {
-                    coordinates: submission.coordinates,
-                    county: submission.county,
-                    submissions: [],
-                    totalCount: 0,
-                    customerCount: 0,
-                    contactCount: 0,
-                    surveyCount: 0
-                })
-            }
-
-            const cluster = countyMap.get(key)
-            cluster.submissions.push(submission)
-            cluster.totalCount++
-
-            if (submission.type === 'customer') cluster.customerCount++
-            if (submission.type === 'contact') cluster.contactCount++
-            if (submission.type === 'survey') cluster.surveyCount++
-        })
-
-        return Array.from(countyMap.values())
-    }
 
     /**
      * Map bounds component to fit all of Ireland
@@ -552,206 +830,11 @@ function Sites()
         return null
     }
 
-    /**
-     * Calculate feasibility scores for candidate sites
-     * @returns {Array} Array of top 3 candidate sites with scores
-     */
-    const getTopCandidateSites = () =>
-    {
-        // Calculate total demand from form submissions
-        const totalDemand = formSubmissions.reduce((acc, submission) =>
-            acc + (parseFloat(submission.current_it_load) || 0), 0
-        )
-
-        // Calculate demand by county
-        const demandByCounty = formSubmissions.reduce((acc, submission) =>
-        {
-            const location = submission.eircode || submission.location || 'Dublin'
-            const county = extractCountyFromLocation(location)
-            if (!acc[county])
-            {
-                acc[county] = 0
-            }
-            acc[county] += parseFloat(submission.current_it_load) || 0
-            return acc
-        }, {})
-
-        // Define candidate sites with base characteristics
-        const candidateSites = [
-            {
-                name: 'Dublin Industrial Zone',
-                county: 'Dublin',
-                coordinates: [53.3498, -6.2603],
-                powerCapacity: 95, // Grid capacity score
-                fibreConnectivity: 90, // Carrier density
-                landAvailability: 70, // Industrial zones available
-                latencyFit: 95, // Close to major demand
-                resilience: 85, // Good infrastructure
-                strengths: ['Major carrier hub', 'High grid capacity', 'Close to demand clusters']
-            },
-            {
-                name: 'Cork Technology Park',
-                county: 'Cork',
-                coordinates: [51.8985, -8.4756],
-                powerCapacity: 80,
-                fibreConnectivity: 75,
-                landAvailability: 85,
-                latencyFit: 80,
-                resilience: 80,
-                strengths: ['Growing tech sector', 'Available land', 'Good connectivity']
-            },
-            {
-                name: 'Galway Business Park',
-                county: 'Galway',
-                coordinates: [53.2707, -9.0568],
-                powerCapacity: 70,
-                fibreConnectivity: 65,
-                landAvailability: 90,
-                latencyFit: 70,
-                resilience: 75,
-                strengths: ['Plenty of land', 'Lower costs', 'Growing region']
-            },
-            {
-                name: 'Limerick Industrial Estate',
-                county: 'Limerick',
-                coordinates: [52.6638, -8.6267],
-                powerCapacity: 75,
-                fibreConnectivity: 70,
-                landAvailability: 80,
-                latencyFit: 75,
-                resilience: 80,
-                strengths: ['Established industrial base', 'Good infrastructure', 'Central location']
-            },
-            {
-                name: 'Waterford Business District',
-                county: 'Waterford',
-                coordinates: [52.2593, -7.1101],
-                powerCapacity: 65,
-                fibreConnectivity: 60,
-                landAvailability: 85,
-                latencyFit: 70,
-                resilience: 75,
-                strengths: ['Available land', 'Lower costs', 'Growing area']
-            }
-        ]
-
-        // Calculate weighted scores for each site
-        const scoredSites = candidateSites.map(site =>
-        {
-            // Adjust scores based on demand proximity
-            const demandProximity = demandByCounty[site.county] || 0
-            const demandFactor = Math.min(1.2, 1 + (demandProximity / totalDemand) * 0.5)
-
-            const powerScore = Math.round(site.powerCapacity * demandFactor)
-            const fibreScore = site.fibreConnectivity
-            const landScore = site.landAvailability
-            const latencyScore = Math.round(site.latencyFit * demandFactor)
-            const resilienceScore = site.resilience
-
-            const totalScore = Math.min(100,
-                (powerScore * 0.4) +
-                (fibreScore * 0.25) +
-                (landScore * 0.2) +
-                (latencyScore * 0.1) +
-                (resilienceScore * 0.05)
-            )
-
-            return {
-                ...site,
-                score: Math.round(totalScore),
-                powerScore: Math.round(powerScore * 0.4),
-                fibreScore: Math.round(fibreScore * 0.25),
-                landScore: Math.round(landScore * 0.2),
-                latencyScore: Math.round(latencyScore * 0.1),
-                resilienceScore: Math.round(resilienceScore * 0.05)
-            }
-        })
-
-        // Sort by score and return top 3
-        return scoredSites
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3)
-    }
-
-    /**
-     * Calculate financial projections for a candidate site
-     * @param {Object} site - Candidate site object
-     * @returns {Object} Financial calculations
-     */
-    const calculateSiteFinancials = (site) =>
-    {
-        // Realistic data center cost assumptions
-        const capexPerKW = 8000 // €8,000/kW (more realistic for modular data centers)
-        const softCostsPct = 0.20 // 20% (permits, design, project management)
-        const maintPct = 0.02 // 2% per year (maintenance as % of CapEx)
-        const staffingPerYr = 180000 // €180,000/year (2-3 staff for 1MW facility)
-        const insurancePerYr = 25000 // €25,000/year (facility insurance)
-        const energyPrice = 120 // €120/MWh (realistic Irish energy prices)
-        const pue = 1.3 // Power Usage Effectiveness (modern efficient design)
-        const wacc = 0.08 // 8% WACC
-
-        // Realistic colo revenue assumptions (what customers pay)
-        const coloRatePerKW = 1200 // €1,200/kW/month (realistic colo pricing)
-        const bandwidthRate = 80 // €80/Gbps/month (bandwidth pricing)
-        const crossConnectRate = 300 // €300/month (cross-connect fees)
-        const compliancePct = 0.20 // 20% overhead (compliance, security, etc.)
-
-        // Calculate local demand for this site's county
-        const localDemand = formSubmissions.reduce((acc, submission) =>
-        {
-            const location = submission.eircode || submission.location || 'Dublin'
-            const county = extractCountyFromLocation(location)
-            if (county === site.county)
-            {
-                return acc + (parseFloat(submission.current_it_load) || 0)
-            }
-            return acc
-        }, 0)
-
-        // CapEx calculations (for 1MW facility)
-        const facilitySizeKW = 1000 // 1MW
-        const baseCapex = capexPerKW * facilitySizeKW
-        const softCosts = baseCapex * softCostsPct
-        const totalCapex = baseCapex + softCosts
-
-        // OpEx calculations (annual)
-        const energyCost = (facilitySizeKW * pue * energyPrice * 8760) / 1000 // Convert to MWh
-        const maintenanceCost = totalCapex * maintPct
-        const totalOpex = energyCost + staffingPerYr + maintenanceCost + insurancePerYr
-
-        // Revenue calculations (based on local demand and realistic utilization)
-        const demandFactor = Math.min(1.0, localDemand / (facilitySizeKW * 0.5)) // Scale based on local demand
-        const utilizationRate = Math.min(0.85, 0.3 + (demandFactor * 0.5)) // 30-85% utilization based on demand
-        const coloRevenue = (facilitySizeKW * utilizationRate * coloRatePerKW * 12) * (1 + compliancePct)
-        const bandwidthRevenue = (facilitySizeKW * utilizationRate * 0.2 * bandwidthRate * 12) // 20% of capacity needs bandwidth
-        const crossConnectRevenue = crossConnectRate * 12 * Math.ceil(utilizationRate * 5) // 1 cross-connect per 200kW
-        const totalRevenue = coloRevenue + bandwidthRevenue + crossConnectRevenue
-
-        // ROI calculations
-        const annualProfit = totalRevenue - totalOpex
-        const paybackPeriod = totalCapex / Math.max(annualProfit, 1) // Avoid division by zero
-        const roi = ((annualProfit * 10) - totalCapex) / totalCapex * 100 // 10-year ROI
-
-        return {
-            capexPerKW,
-            totalCapex: Math.round(totalCapex),
-            softCosts: Math.round(softCosts),
-            energyCost: Math.round(energyCost),
-            staffingCost: staffingPerYr,
-            maintenanceCost: Math.round(maintenanceCost),
-            insuranceCost: insurancePerYr,
-            totalOpex: Math.round(totalOpex),
-            localDemand,
-            revenuePotential: Math.round(totalRevenue),
-            paybackPeriod: Math.round(paybackPeriod * 10) / 10,
-            roi: Math.round(roi)
-        }
-    }
 
     return (
         <PasscodeProtection
             correctPasscode="harsha@esb.ie"
-            title="Sites Access Required"
+            title="Modular DC Analysis Access Required"
             subtitle="Please enter the passcode to view our data center sites information"
         >
             <main className="pt-20">
@@ -760,7 +843,7 @@ function Sites()
                         {/* Header */}
                         <div className="text-center mb-12">
                             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                                Data Center Sites
+                                Modular DC Analysis
                             </h1>
                             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                                 Explore our network of modular data center sites across Ireland, designed for optimal performance and sustainability.
@@ -782,7 +865,6 @@ function Sites()
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                                        <span>Surveys</span>
                                     </div>
                                 </div>
                             </div>
@@ -799,33 +881,42 @@ function Sites()
                                     />
                                     <MapBounds />
 
-                                    {processSubmissionsForMap().map((cluster) => (
+                                    {processSubmissionsForMap().map((marker) => (
                                         <Marker
-                                            key={`cluster-${cluster.coordinates[0]}-${cluster.coordinates[1]}`}
-                                            position={[cluster.coordinates[0], cluster.coordinates[1]]}
-                                            icon={createCustomIcon(cluster.totalCount > 1 ? '#EF4444' : '#3B82F6')}
+                                            key={marker.id}
+                                            position={[marker.coordinates[0], marker.coordinates[1]]}
+                                            icon={createCustomIcon(marker.color)}
                                         >
                                             <Popup>
-                                                <div className="p-2">
-                                                    <h3 className="font-semibold text-lg mb-2">{cluster.county}</h3>
-                                                    <div className="space-y-1 text-sm">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-blue-600">Customer Leads:</span>
-                                                            <span className="font-medium">{cluster.customerCount}</span>
+                                                <div className="p-3 min-w-[250px]">
+                                                    <h3 className="font-bold text-lg mb-3 text-gray-900">{marker.submission.company_name}</h3>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-gray-600 font-medium">Location:</span>
+                                                            <span className="font-semibold text-gray-900">{marker.county}</span>
                                                         </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-green-600">Contact Forms:</span>
-                                                            <span className="font-medium">{cluster.contactCount}</span>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-gray-600 font-medium">Company:</span>
+                                                            <span className="font-semibold text-gray-900">{marker.submission.sector}</span>
                                                         </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-purple-600">Surveys:</span>
-                                                            <span className="font-medium">{cluster.surveyCount}</span>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-gray-600 font-medium">IT Load:</span>
+                                                            <span className="font-semibold text-gray-900">{marker.submission.current_it_load} kW</span>
                                                         </div>
-                                                        <div className="border-t pt-1 mt-2">
-                                                            <div className="flex justify-between font-semibold">
-                                                                <span>Total:</span>
-                                                                <span>{cluster.totalCount}</span>
+                                                        <div className="border-t pt-2 mt-3">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-gray-600 font-medium">Feasibility Score:</span>
+                                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${marker.feasibility.score >= 70 ? 'bg-green-100 text-green-800' :
+                                                                    marker.feasibility.score >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                                                        'bg-red-100 text-red-800'
+                                                                    }`}>
+                                                                    {marker.feasibility.score}/100
+                                                                </span>
                                                             </div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-2">
+                                                            <div>CapEx: €{marker.feasibility.capex}M | Power: {marker.feasibility.powerMW} MW</div>
+                                                            <div>Grid OK: {marker.feasibility.gridOK ? '✅' : '❌'}</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -931,23 +1022,84 @@ function Sites()
                                 <div className="bg-green-50 rounded-lg p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h4 className="font-semibold text-green-900">Contact Forms</h4>
-                                            <p className="text-green-700 text-sm">General inquiries</p>
+                                            <h4 className="font-semibold text-green-900">High Feasibility</h4>
+                                            <p className="text-green-700 text-sm">Score ≥ 70</p>
                                         </div>
-                                        <span className="text-2xl font-bold text-green-600">{contactSubmissions.length}</span>
+                                        <span className="text-2xl font-bold text-green-600">
+                                            {formSubmissions.filter(sub =>
+                                            {
+                                                const feasibility = calculateFeasibilityScore(sub)
+                                                return feasibility.score >= 70
+                                            }).length}
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="bg-purple-50 rounded-lg p-4">
+                                <div className="bg-orange-50 rounded-lg p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h4 className="font-semibold text-purple-900">Surveys</h4>
-                                            <p className="text-purple-700 text-sm">Advanced surveys</p>
+                                            <h4 className="font-semibold text-orange-900">Medium Feasibility</h4>
+                                            <p className="text-orange-700 text-sm">Score 40-69</p>
                                         </div>
-                                        <span className="text-2xl font-bold text-purple-600">{surveySubmissions.length}</span>
+                                        <span className="text-2xl font-bold text-orange-600">
+                                            {formSubmissions.filter(sub =>
+                                            {
+                                                const feasibility = calculateFeasibilityScore(sub)
+                                                return feasibility.score >= 40 && feasibility.score < 70
+                                            }).length}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Modular DC Analysis Charts */}
+                        {!loading && !error && formSubmissions.length > 0 && (
+                            <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Modular DC Analysis</h2>
+                                    <p className="text-gray-600">
+                                        Comprehensive analysis of customer requirements and market insights based on discovery form submissions.
+                                    </p>
+                                </div>
+
+                                {/* Charts Grid - 3x2 Layout */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {/* Row 1 */}
+                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 shadow-sm border border-blue-200">
+                                        <div className="h-80">
+                                            <DemandTypeVsPowerChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 shadow-sm border border-green-200">
+                                        <div className="h-80">
+                                            <RegionalHeatMapChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 shadow-sm border border-purple-200">
+                                        <div className="h-80">
+                                            <SustainabilityTargetsChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+
+                                    {/* Row 2 */}
+                                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 shadow-sm border border-orange-200">
+                                        <div className="h-80">
+                                            <ServiceDemandMixChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 shadow-sm border border-red-200">
+                                        <div className="h-80">
+                                            <TierPreferenceChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 shadow-sm border border-indigo-200">
+                                        <div className="h-80">
+                                            <BudgetVsLoadChart data={formSubmissions} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Form Submissions Tables */}
                         <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
@@ -965,12 +1117,6 @@ function Sites()
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                                     >
                                         Refresh Contact Forms
-                                    </button>
-                                    <button
-                                        onClick={fetchSurveySubmissionsData}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                                    >
-                                        Refresh Surveys
                                     </button>
                                 </div>
                             </div>
@@ -1266,119 +1412,6 @@ function Sites()
                                 )}
                             </div>
 
-                            {/* Survey Form Submissions */}
-                            <div className="mt-8">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Form Submissions</h3>
-                                {surveyLoading ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                                        <span className="ml-3 text-gray-600">Loading survey submissions...</span>
-                                    </div>
-                                ) : surveyError ? (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                                        <p className="text-red-600">{surveyError}</p>
-                                        <button
-                                            onClick={fetchSurveySubmissionsData}
-                                            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                                        >
-                                            Try Again
-                                        </button>
-                                    </div>
-                                ) : surveySubmissions.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <p>No survey form submissions found.</p>
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-50">
-                                                <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Primary Use
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        PUE Expectation
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Commercial Preference
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Budget (€)
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Contract Length
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Sustainability
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Compliance
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Waste Heat
-                                                    </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                        Submitted
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                {surveySubmissions.map((submission) => (
-                                                    <tr key={submission.id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                {submission.primary_use}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {submission.pue_expectation}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {submission.commercial_preference}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {submission.capex_budget && (
-                                                                <div className="text-xs">
-                                                                    <div>CapEx: €{submission.capex_budget.toLocaleString()}</div>
-                                                                    {submission.opex_budget && (
-                                                                        <div>OpEx: €{submission.opex_budget.toLocaleString()}/mo</div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {submission.contract_length}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            {submission.sustainability_target}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {submission.compliance.map((item, index) => (
-                                                                    <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                                        {item}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${submission.waste_heat_reuse
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-gray-100 text-gray-800'
-                                                                }`}>
-                                                                {submission.waste_heat_reuse ? 'Yes' : 'No'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                            {formatDate(submission.submitted_at)}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         {/* Demand Aggregation - Customer Lead Forms */}
@@ -1506,466 +1539,44 @@ function Sites()
                             )}
                         </div>
 
-                        {/* Demand Aggregation - Survey Forms */}
-                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Demand Aggregation - Survey Data</h2>
-                            {surveySubmissions.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>Not enough data for demand aggregation yet.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {/* Primary Use Summary */}
-                                    <div className="bg-indigo-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-indigo-900 mb-4">By Primary Use</h3>
-                                        <div className="space-y-2">
-                                            {Object.entries(
-                                                surveySubmissions.reduce((acc, submission) =>
-                                                {
-                                                    const use = submission.primary_use
-                                                    if (!acc[use])
-                                                    {
-                                                        acc[use] = 0
-                                                    }
-                                                    acc[use]++
-                                                    return acc
-                                                }, {})
-                                            ).map(([use, count]) => (
-                                                <div key={use} className="flex justify-between items-center">
-                                                    <span className="text-indigo-700 font-medium">{use}</span>
-                                                    <span className="text-indigo-900 font-bold">{count} responses</span>
-                                                </div>
+                        {/* Feasibility Study Component */}
+                        {!loading && !error && formSubmissions.length > 0 && (
+                            <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Feasibility Study</h2>
+                                    <p className="text-gray-600 mb-6">
+                                        Calculate financial feasibility and return metrics for individual customer requirements.
+                                    </p>
+
+                                    {/* Company Selection Dropdown */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Select Company for Feasibility Analysis
+                                        </label>
+                                        <select
+                                            value={selectedCompany || ''}
+                                            onChange={(e) => setSelectedCompany(e.target.value)}
+                                            className="w-full max-w-md px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Choose a company...</option>
+                                            {formSubmissions.map((submission, index) => (
+                                                <option key={index} value={index}>
+                                                    {submission.company_name || `Company ${index + 1}`}
+                                                </option>
                                             ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Budget Summary */}
-                                    <div className="bg-yellow-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-yellow-900 mb-4">Budget Analysis</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-yellow-700 font-medium">Avg CapEx Budget</span>
-                                                <span className="text-yellow-900 font-bold">
-                                                    €{Math.round(surveySubmissions.reduce((acc, submission) =>
-                                                        acc + (parseFloat(submission.capex_budget) || 0), 0
-                                                    ) / surveySubmissions.length).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-yellow-700 font-medium">Avg OpEx Budget</span>
-                                                <span className="text-yellow-900 font-bold">
-                                                    €{Math.round(surveySubmissions.reduce((acc, submission) =>
-                                                        acc + (parseFloat(submission.opex_budget) || 0), 0
-                                                    ) / surveySubmissions.length).toLocaleString()}/mo
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Contract & Sustainability */}
-                                    <div className="bg-teal-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-teal-900 mb-4">Contract Preferences</h3>
-                                        <div className="space-y-2">
-                                            {Object.entries(
-                                                surveySubmissions.reduce((acc, submission) =>
-                                                {
-                                                    const length = submission.contract_length
-                                                    if (!acc[length])
-                                                    {
-                                                        acc[length] = 0
-                                                    }
-                                                    acc[length]++
-                                                    return acc
-                                                }, {})
-                                            ).map(([length, count]) => (
-                                                <div key={length} className="flex justify-between items-center">
-                                                    <span className="text-teal-700 font-medium">{length}</span>
-                                                    <span className="text-teal-900 font-bold">{count} responses</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Compliance Summary */}
-                                    <div className="bg-red-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-red-900 mb-4">Compliance Requirements</h3>
-                                        <div className="space-y-2">
-                                            {Object.entries(
-                                                surveySubmissions.reduce((acc, submission) =>
-                                                {
-                                                    submission.compliance.forEach(comp =>
-                                                    {
-                                                        if (!acc[comp])
-                                                        {
-                                                            acc[comp] = 0
-                                                        }
-                                                        acc[comp]++
-                                                    })
-                                                    return acc
-                                                }, {})
-                                            ).map(([comp, count]) => (
-                                                <div key={comp} className="flex justify-between items-center">
-                                                    <span className="text-red-700 font-medium">{comp}</span>
-                                                    <span className="text-red-900 font-bold">{count} responses</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* PUE Expectations */}
-                                    <div className="bg-orange-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-orange-900 mb-4">PUE Expectations</h3>
-                                        <div className="space-y-2">
-                                            {Object.entries(
-                                                surveySubmissions.reduce((acc, submission) =>
-                                                {
-                                                    const pue = submission.pue_expectation
-                                                    if (!acc[pue])
-                                                    {
-                                                        acc[pue] = 0
-                                                    }
-                                                    acc[pue]++
-                                                    return acc
-                                                }, {})
-                                            ).map(([pue, count]) => (
-                                                <div key={pue} className="flex justify-between items-center">
-                                                    <span className="text-orange-700 font-medium">{pue}</span>
-                                                    <span className="text-orange-900 font-bold">{count} responses</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Total Survey Summary */}
-                                    <div className="bg-gray-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Summary</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-gray-700 font-medium">Total Responses</span>
-                                                <span className="text-gray-900 font-bold text-xl">{surveySubmissions.length}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-gray-700 font-medium">Waste Heat Interest</span>
-                                                <span className="text-gray-900 font-bold text-xl">
-                                                    {surveySubmissions.filter(s => s.waste_heat_reuse).length} / {surveySubmissions.length}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        </select>
                                     </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Feasibility Scoring Component */}
-                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Site Feasibility Scoring</h2>
-                            <div className="mb-6">
-                                <p className="text-gray-600 mb-4">
-                                    Scoring based on weighted criteria: Power capacity (40%), Fibre connectivity (25%),
-                                    Land availability (20%), Latency fit (10%), Resilience (5%)
-                                </p>
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-                                    <div className="bg-blue-50 rounded-lg p-3">
-                                        <div className="font-semibold text-blue-900">Power Capacity (40%)</div>
-                                        <div className="text-blue-700 text-xs">Based on total demand and grid capacity</div>
-                                    </div>
-                                    <div className="bg-green-50 rounded-lg p-3">
-                                        <div className="font-semibold text-green-900">Fibre Connectivity (25%)</div>
-                                        <div className="text-green-700 text-xs">Carrier availability and bandwidth</div>
-                                    </div>
-                                    <div className="bg-yellow-50 rounded-lg p-3">
-                                        <div className="font-semibold text-yellow-900">Land Availability (20%)</div>
-                                        <div className="text-yellow-700 text-xs">Suitable sites and planning permissions</div>
-                                    </div>
-                                    <div className="bg-purple-50 rounded-lg p-3">
-                                        <div className="font-semibold text-purple-900">Latency Fit (10%)</div>
-                                        <div className="text-purple-700 text-xs">Proximity to demand clusters</div>
-                                    </div>
-                                    <div className="bg-red-50 rounded-lg p-3">
-                                        <div className="font-semibold text-red-900">Resilience (5%)</div>
-                                        <div className="text-red-700 text-xs">Natural disaster risk and redundancy</div>
-                                    </div>
-                                </div>
+                                {/* Feasibility Results */}
+                                {selectedCompany !== null && selectedCompany !== '' && (
+                                    <FeasibilityResults
+                                        customerData={formSubmissions[selectedCompany]}
+                                    />
+                                )}
                             </div>
+                        )}
 
-                            {formSubmissions.length === 0 && surveySubmissions.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>Not enough data for feasibility scoring yet.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Top 3 Candidate Sites */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 3 Candidate Sites</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            {getTopCandidateSites().map((site, index) => (
-                                                <div key={site.name} className={`rounded-lg p-6 ${index === 0 ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300' :
-                                                    index === 1 ? 'bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-300' :
-                                                        'bg-gradient-to-br from-orange-50 to-red-50 border-2 border-orange-300'
-                                                    }`}>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h4 className="text-lg font-bold text-gray-900">{site.name}</h4>
-                                                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-200 text-yellow-800' :
-                                                            index === 1 ? 'bg-gray-200 text-gray-800' :
-                                                                'bg-orange-200 text-orange-800'
-                                                            }`}>
-                                                            #{index + 1}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="text-gray-700 font-medium">Feasibility Score</span>
-                                                            <span className="text-2xl font-bold text-gray-900">{site.score}/100</span>
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Power Capacity</span>
-                                                                <span className="font-medium">{site.powerScore}/40</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Fibre Connectivity</span>
-                                                                <span className="font-medium">{site.fibreScore}/25</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Land Availability</span>
-                                                                <span className="font-medium">{site.landScore}/20</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Latency Fit</span>
-                                                                <span className="font-medium">{site.latencyScore}/10</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Resilience</span>
-                                                                <span className="font-medium">{site.resilienceScore}/5</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="pt-3 border-t">
-                                                            <div className="text-sm text-gray-600">
-                                                                <div className="font-medium mb-1">Key Strengths:</div>
-                                                                <div className="text-xs space-y-1">
-                                                                    {site.strengths.map((strength, idx) => (
-                                                                        <div key={idx}>• {strength}</div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Detailed Scoring Breakdown */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scoring Methodology</h3>
-                                        <div className="bg-gray-50 rounded-lg p-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div>
-                                                    <h4 className="font-semibold text-gray-900 mb-3">Scoring Factors</h4>
-                                                    <div className="space-y-2 text-sm">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Power Capacity</span>
-                                                            <span className="font-medium">Based on grid capacity and demand proximity</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Fibre Connectivity</span>
-                                                            <span className="font-medium">Carrier density and bandwidth availability</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Land Availability</span>
-                                                            <span className="font-medium">Industrial zones and planning permissions</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Latency Fit</span>
-                                                            <span className="font-medium">Distance to major demand clusters</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Resilience</span>
-                                                            <span className="font-medium">Natural disaster risk and redundancy</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-gray-900 mb-3">Cost Assumptions</h4>
-                                                    <div className="space-y-2 text-sm">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">On-premise CapEx</span>
-                                                            <span className="font-medium">€15,000/kW + 25% soft costs</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Colo Monthly</span>
-                                                            <span className="font-medium">€800/kW + €50/Gbps</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">Energy Price</span>
-                                                            <span className="font-medium">€80/MWh</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">PUE Target</span>
-                                                            <span className="font-medium">1.5 (industry standard)</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-gray-600">WACC</span>
-                                                            <span className="font-medium">8% (weighted average cost of capital)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* CapEx/OpEx Estimate Component */}
-                        <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">CapEx/OpEx Estimates</h2>
-                            <p className="text-gray-600 mb-6">
-                                Financial projections for each recommended site based on local demand and cost assumptions
-                            </p>
-
-                            {formSubmissions.length === 0 && surveySubmissions.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <p>Not enough data for financial estimates yet.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Top 3 Sites Financial Analysis */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        {getTopCandidateSites().map((site, index) =>
-                                        {
-                                            const financials = calculateSiteFinancials(site)
-                                            return (
-                                                <div key={site.name} className="bg-white border-2 border-gray-200 rounded-lg p-6">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h3 className="text-lg font-bold text-gray-900">{site.name}</h3>
-                                                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-200 text-yellow-800' :
-                                                            index === 1 ? 'bg-gray-200 text-gray-800' :
-                                                                'bg-orange-200 text-orange-800'
-                                                            }`}>
-                                                            #{index + 1}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-4">
-                                                        {/* CapEx Breakdown */}
-                                                        <div className="bg-blue-50 rounded-lg p-4">
-                                                            <h4 className="font-semibold text-blue-900 mb-3">Capital Expenditure</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-blue-700">Build Cost per kW</span>
-                                                                    <span className="font-medium">€{financials.capexPerKW.toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-blue-700">Total CapEx (1MW)</span>
-                                                                    <span className="font-medium">€{financials.totalCapex.toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-blue-700">Soft Costs (25%)</span>
-                                                                    <span className="font-medium">€{financials.softCosts.toLocaleString()}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* OpEx Breakdown */}
-                                                        <div className="bg-green-50 rounded-lg p-4">
-                                                            <h4 className="font-semibold text-green-900 mb-3">Annual Operating Costs</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-green-700">Energy (1MW @ €80/MWh)</span>
-                                                                    <span className="font-medium">€{financials.energyCost.toLocaleString()}/yr</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-green-700">Staffing</span>
-                                                                    <span className="font-medium">€{financials.staffingCost.toLocaleString()}/yr</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-green-700">Maintenance</span>
-                                                                    <span className="font-medium">€{financials.maintenanceCost.toLocaleString()}/yr</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-green-700">Insurance</span>
-                                                                    <span className="font-medium">€{financials.insuranceCost.toLocaleString()}/yr</span>
-                                                                </div>
-                                                                <div className="border-t pt-2">
-                                                                    <div className="flex justify-between font-semibold">
-                                                                        <span className="text-green-800">Total OpEx</span>
-                                                                        <span className="text-green-900">€{financials.totalOpex.toLocaleString()}/yr</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* ROI Analysis */}
-                                                        <div className="bg-purple-50 rounded-lg p-4">
-                                                            <h4 className="font-semibold text-purple-900 mb-3">ROI Analysis</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-purple-700">Local Demand</span>
-                                                                    <span className="font-medium">{financials.localDemand.toFixed(1)} kW</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-purple-700">Revenue Potential</span>
-                                                                    <span className="font-medium">€{financials.revenuePotential.toLocaleString()}/yr</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-purple-700">Payback Period</span>
-                                                                    <span className="font-medium">{financials.paybackPeriod} years</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-purple-700">ROI (10 years)</span>
-                                                                    <span className="font-medium">{financials.roi}%</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-
-                                    {/* Cost Assumptions Reference */}
-                                    <div className="bg-gray-50 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Assumptions Reference</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            <div>
-                                                <h4 className="font-semibold text-gray-800 mb-2">Data Center Build Costs</h4>
-                                                <div className="space-y-1 text-sm text-gray-600">
-                                                    <div>CapEx: €8,000/kW (modular design)</div>
-                                                    <div>Soft Costs: 20% of CapEx</div>
-                                                    <div>Maintenance: 2% of CapEx/year</div>
-                                                    <div>Staffing: €180,000/year (2-3 staff)</div>
-                                                    <div>Insurance: €25,000/year</div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-gray-800 mb-2">Energy & Operations</h4>
-                                                <div className="space-y-1 text-sm text-gray-600">
-                                                    <div>Energy: €120/MWh (Irish rates)</div>
-                                                    <div>PUE: 1.3 (efficient design)</div>
-                                                    <div>WACC: 8%</div>
-                                                    <div>Depreciation: 5 years</div>
-                                                    <div>Hours/Year: 8,760</div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-gray-800 mb-2">Revenue Assumptions</h4>
-                                                <div className="space-y-1 text-sm text-gray-600">
-                                                    <div>Colo Rate: €1,200/kW/month</div>
-                                                    <div>Bandwidth: €80/Gbps/month</div>
-                                                    <div>Cross-connect: €300/month</div>
-                                                    <div>Compliance: +20% overhead</div>
-                                                    <div>Utilization: 30-85% (demand-based)</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
             </main>
@@ -1973,4 +1584,4 @@ function Sites()
     )
 }
 
-export default Sites
+export default ModularDCAnalysis

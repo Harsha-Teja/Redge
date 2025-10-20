@@ -5,6 +5,24 @@
             "title": "CRU Connection Policy Proposed Decision",
             "url": "https://cruie-live-96ca64acab2247eca8a850a7e54b-5b34f62.divio-media.com/documents/CRU202504_LEU_connection_policy_proposed_decision.pdf",
             "description": "Proposed decision on the connection policy for the LEU data centre."
+        },
+        {
+            "date": "2025-10-03",
+            "title": "Datacenter Anatomy Part 1: Electrical Systems",
+            "url": "https://semianalysis.com/2024/10/14/datacenter-anatomy-part-1-electrical/#",
+            "description": "Datacenter Anatomy Part 1: Electrical Systems Meta Datacenter Scrapped, Vertiv, Schneider Electric, Eaton, Legrand, Delta, Datacenter Bill Of Materials By Component, Transformers, Switchgear, Redundancy, UPS, OCP Busbar, Generators, Substation"
+        },
+        {
+            "date": "2025-10-03",
+            "title": "Datacenter Anatomy Part 2: Cooling systems",
+            "url": "https://semianalysis.com/2025/02/13/datacenter-anatomy-part-2-cooling-systems/#",
+            "description": "L2A, L2L, Immersion, Two-Phase, Google vs Meta vs Microsoft vs Amazon Water Cooling Design, WUE, PUE, Nvidia Rubin Power & Cooling Architecture"
+        },
+        {
+            "date": "2025-10-03",
+            "title": "AI Datacenter Energy Dilemma – Race for AI Datacenter Space",
+            "url": "https://semianalysis.com/2024/03/13/ai-datacenter-energy-dilemma-race/#",
+            "description": "Gigawatt Dreams and Matroyshka Brains Limited By Datacenters Not Chips"
         }
     ]
 }

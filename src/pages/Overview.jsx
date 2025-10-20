@@ -8,8 +8,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { calculateAllSolutions } from '../lib/costing'
-import { submitFormToSupabase, submitSurveyToSupabase } from '../lib/supabase.js'
+import { submitFormToSupabase } from '../lib/supabase.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 // Using inline SVG icons instead of external package
@@ -84,6 +83,31 @@ const DATA_CENTRE_SERVICES = [
     'Hybrid'
 ]
 
+// Budget range options
+const BUDGET_RANGE_OPTIONS = [
+    'Under €100k',
+    '€100k - €500k',
+    '€500k - €1M',
+    '€1M - €5M',
+    '€5M - €10M',
+    'Over €10M',
+    'Not specified'
+]
+
+// Commercial model options
+const COMMERCIAL_MODEL_OPTIONS = [
+    'Lease',
+    'Own',
+    'Managed Service'
+]
+
+// Backup/DR options
+const BACKUP_DR_OPTIONS = [
+    'Yes - Required',
+    'No - Not required',
+    'Maybe - Under consideration'
+]
+
 export default function Overview()
 {
     // Wind farm data state
@@ -138,6 +162,11 @@ export default function Overview()
         micLimit: '',
         existingLoad: '',
 
+        // New fields
+        budgetRange: '',
+        commercialModel: '',
+        backupDR: '',
+
         // Legacy fields for compatibility
         uptimeTarget: '',
         serverCount: '',
@@ -155,24 +184,8 @@ export default function Overview()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
 
-    // Advanced Survey Modal State
-    const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false)
-    const [showToast, setShowToast] = useState(false)
-    const [surveyData, setSurveyData] = useState({
-        primaryUse: '',
-        wasteHeatReuse: false,
-        pueExpectation: 1.5,
-        commercialPreference: '',
-        capexBudget: '',
-        opexBudget: '',
-        contractLength: '',
-        sustainabilityTarget: '',
-        compliance: []
-    })
-
     // Form submission tracking
     const [hasSubmittedMainForm, setHasSubmittedMainForm] = useState(false)
-    const [hasSubmittedSurvey, setHasSubmittedSurvey] = useState(false)
 
     /**
      * Check for existing form submissions on component mount
@@ -180,15 +193,10 @@ export default function Overview()
     useEffect(() =>
     {
         const mainFormSubmitted = localStorage.getItem('redge_main_form_submitted')
-        const surveySubmitted = localStorage.getItem('redge_survey_submitted')
 
         if (mainFormSubmitted === 'true')
         {
             setHasSubmittedMainForm(true)
-        }
-        if (surveySubmitted === 'true')
-        {
-            setHasSubmittedSurvey(true)
         }
     }, [])
 
@@ -574,124 +582,7 @@ export default function Overview()
         location.admin_name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    /**
-     * Handle survey form input changes
-     */
-    const handleSurveyInputChange = (e) =>
-    {
-        const { name, value, type, checked } = e.target
-        setSurveyData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }))
-    }
 
-    /**
-     * Handle compliance multi-select
-     */
-    const handleComplianceChange = (e) =>
-    {
-        const { value, checked } = e.target
-        setSurveyData(prev => ({
-            ...prev,
-            compliance: checked
-                ? [...prev.compliance, value]
-                : prev.compliance.filter(item => item !== value)
-        }))
-    }
-
-    /**
-     * Open survey modal
-     */
-    const openSurveyModal = () =>
-    {
-        setIsSurveyModalOpen(true)
-    }
-
-    /**
-     * Close survey modal
-     */
-    const closeSurveyModal = () =>
-    {
-        setIsSurveyModalOpen(false)
-        setSurveyData({
-            primaryUse: '',
-            wasteHeatReuse: false,
-            pueExpectation: 1.5,
-            commercialPreference: '',
-            capexBudget: '',
-            opexBudget: '',
-            contractLength: '',
-            sustainabilityTarget: '',
-            compliance: []
-        })
-    }
-
-    /**
-     * Handle survey form submission
-     */
-    const handleSurveySubmit = async (e) =>
-    {
-        e.preventDefault()
-
-        // Check if already submitted
-        if (hasSubmittedSurvey)
-        {
-            alert('You have already submitted the survey. Thank you for your submission!')
-            closeSurveyModal()
-            return
-        }
-
-        try
-        {
-            console.log('Submitting survey form to Supabase:', surveyData)
-
-            const result = await submitSurveyToSupabase(surveyData)
-
-            if (result.success)
-            {
-                console.log('Survey form submitted successfully:', result.data)
-
-                // Store in localStorage for local tracking
-                const submissionData = {
-                    ...surveyData,
-                    timestamp: new Date().toISOString()
-                }
-                localStorage.setItem('redge_advanced_survey', JSON.stringify(submissionData))
-
-                // Mark survey as submitted
-                localStorage.setItem('redge_survey_submitted', 'true')
-                setHasSubmittedSurvey(true)
-
-                // Show toast
-                setShowToast(true)
-                setTimeout(() => setShowToast(false), 3000)
-
-                // Close modal
-                closeSurveyModal()
-            } else
-            {
-                console.error('Error submitting survey form:', result.error)
-                alert('Sorry, there was an error submitting your survey. Please try again.')
-            }
-        } catch (error)
-        {
-            console.error('Error submitting survey form:', error)
-            alert('Sorry, there was an error submitting your survey. Please try again.')
-        }
-    }
-
-    /**
-     * Show toast notification
-     */
-    useEffect(() =>
-    {
-        if (showToast)
-        {
-            const timer = setTimeout(() => setShowToast(false), 3000)
-            return () => clearTimeout(timer)
-        }
-    }, [showToast])
 
     /**
      * Validate form fields
@@ -739,6 +630,111 @@ export default function Overview()
     }
 
     /**
+     * Calculate service cost estimates based on user inputs
+     * @param {Object} formData - User form data
+     * @returns {Object} Service cost estimates
+     */
+    const calculateServiceCosts = (formData) =>
+    {
+        // Base prices (€/kW/month) - Industry standard 2025 Ireland
+        const basePrices = {
+            retailBase: 220,    // Retail Colocation
+            wholesaleBase: 160, // Wholesale Colocation
+            dedicatedBase: 280, // Dedicated Hosting
+            managedBase: 300,   // Managed Service
+            aiBase: 400        // AI / GPU Pod
+        }
+
+        // Extract user inputs
+        const itLoadKW = parseFloat(formData.currentITLoad) || 0
+        const tier = formData.availabilityTier || 'Tier III'
+        const gpuShare = parseFloat(formData.gpuAIShare) || 0
+        const renewableTarget = parseFloat(formData.renewableTarget) || 0
+        const contractTerm = parseInt(formData.contractTerm) || 5
+        const backupDR = formData.backupDR || 'No - Not required'
+        const areaCity = formData.location || 'Dublin'
+
+        // 3.1 Tier Multiplier
+        let tierMult = 1.0
+        if (tier === 'Tier I') tierMult = 0.9
+        else if (tier === 'Tier II') tierMult = 1.0
+        else if (tier === 'Tier III') tierMult = 1.05
+        else if (tier === 'Tier IV') tierMult = 1.15
+
+        // 3.2 GPU / AI Share Multiplier
+        const gpuMult = 1 + (gpuShare / 100) * 0.25 // 0.25 = 2.5% per 10%
+
+        // 3.3 Renewable Target Multiplier
+        let renewMult = 1.0
+        if (renewableTarget >= 90) renewMult = 1.07
+        else if (renewableTarget >= 80) renewMult = 1.05
+
+        // 3.4 Contract Term Multiplier
+        let termMult = 1.0
+        if (contractTerm >= 10) termMult = 0.95
+        else if (contractTerm <= 5) termMult = 1.05
+
+        // 3.5 Disaster Recovery Multiplier
+        const drMult = backupDR.toLowerCase().includes('yes') ? 1.15 : 1.0
+
+        // 3.6 Regional Location Multiplier
+        const regionMult = areaCity.toLowerCase().includes('dublin') ? 1.0 : 1.05
+
+        // 4. Total Multiplier
+        const totalMult = tierMult * gpuMult * renewMult * termMult * drMult * regionMult
+
+        // 5. Service Price Calculation
+        const servicePrices = {
+            retail: Math.round(basePrices.retailBase * totalMult),
+            wholesale: Math.round(basePrices.wholesaleBase * totalMult),
+            dedicated: Math.round(basePrices.dedicatedBase * totalMult),
+            managed: Math.round(basePrices.managedBase * totalMult),
+            ai: Math.round(basePrices.aiBase * totalMult)
+        }
+
+        // 6. Annual & Contract Cost
+        const annualCosts = {
+            retail: servicePrices.retail * itLoadKW * 12,
+            wholesale: servicePrices.wholesale * itLoadKW * 12,
+            dedicated: servicePrices.dedicated * itLoadKW * 12,
+            managed: servicePrices.managed * itLoadKW * 12,
+            ai: servicePrices.ai * itLoadKW * 12
+        }
+
+        const contractCosts = {
+            retail: annualCosts.retail * contractTerm,
+            wholesale: annualCosts.wholesale * contractTerm,
+            dedicated: annualCosts.dedicated * contractTerm,
+            managed: annualCosts.managed * contractTerm,
+            ai: annualCosts.ai * contractTerm
+        }
+
+        return {
+            servicePrices,
+            annualCosts,
+            contractCosts,
+            multipliers: {
+                tier: tierMult,
+                gpu: gpuMult,
+                renewable: renewMult,
+                term: termMult,
+                dr: drMult,
+                region: regionMult,
+                total: totalMult
+            },
+            inputs: {
+                itLoadKW,
+                tier,
+                gpuShare,
+                renewableTarget,
+                contractTerm,
+                backupDR,
+                areaCity
+            }
+        }
+    }
+
+    /**
      * Handle form submission and calculation
      */
     async function handleSubmit(e)
@@ -768,54 +764,10 @@ export default function Overview()
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 2000))
 
-        // Calculate real results using the costing library
+        // Calculate service cost estimates
         console.log('Starting calculations...')
-        let calculatedResults
-        try
-        {
-            calculatedResults = await calculateAllSolutions(formData)
-            console.log('Calculations completed:', calculatedResults)
-        } catch (error)
-        {
-            console.error('Error in calculations:', error)
-            // Fallback to mock results if calculation fails
-            calculatedResults = {
-                onPremises: {
-                    total: 285000,
-                    details: {
-                        'Facility & Energy': 45000,
-                        'Staffing': 120000,
-                        'Maintenance': 25000,
-                        'Insurance': 15000,
-                        'Compliance': 20000,
-                        'Connectivity': 10000
-                    }
-                },
-                colocation: {
-                    total: 195000,
-                    details: {
-                        'Rack Space': 80000,
-                        'Power & Cooling': 35000,
-                        'Connectivity': 25000,
-                        'Management': 30000,
-                        'Compliance': 15000,
-                        'Setup': 10000
-                    }
-                },
-                publicCloud: {
-                    total: 165000,
-                    details: {
-                        'Compute Instances': 70000,
-                        'Storage': 25000,
-                        'Network': 15000,
-                        'Management': 20000,
-                        'Data Transfer': 10000,
-                        'Support': 25000
-                    }
-                }
-            }
-            console.log('Using fallback results:', calculatedResults)
-        }
+        const calculatedResults = calculateServiceCosts(formData)
+        console.log('Calculations completed:', calculatedResults)
 
         // Submit form data to Supabase (in background)
         const supabaseSuccess = await submitToSupabase(formData)
@@ -1883,6 +1835,114 @@ export default function Overview()
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Expected Budget Range */}
+                                        <div className="group">
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                <span className="flex items-center gap-1">
+                                                    <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                                    </svg>
+                                                    Expected Budget Range *
+                                                </span>
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    name="budgetRange"
+                                                    value={formData.budgetRange}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                    className="w-full px-4 py-4 pl-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">Select budget range</option>
+                                                    {BUDGET_RANGE_OPTIONS.map(range => (
+                                                        <option key={range} value={range}>{range}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                                    </svg>
+                                                </div>
+                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Preferred Commercial Model */}
+                                        <div className="group">
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                <span className="flex items-center gap-1">
+                                                    <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    Preferred Commercial Model *
+                                                </span>
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    name="commercialModel"
+                                                    value={formData.commercialModel}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                    className="w-full px-4 py-4 pl-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">Select commercial model</option>
+                                                    {COMMERCIAL_MODEL_OPTIONS.map(model => (
+                                                        <option key={model} value={model}>{model}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Backup or DR Site Connectivity */}
+                                        <div className="group">
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                <span className="flex items-center gap-1">
+                                                    <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    Do you require backup or DR site connectivity?
+                                                </span>
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    name="backupDR"
+                                                    value={formData.backupDR}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                    className="w-full px-4 py-4 pl-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">Select backup/DR requirement</option>
+                                                    {BACKUP_DR_OPTIONS.map(option => (
+                                                        <option key={option} value={option}>{option}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </div>
+                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Additional Fields */}
@@ -2018,417 +2078,262 @@ export default function Overview()
                 </div>
             </section>
 
-            {/* Results Section */}
+            {/* Service Cost Estimate Section */}
             {results && (
                 <section id="results-section" className="py-20 px-6 bg-gray-100">
                     <div className="max-w-7xl mx-auto">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                                Summary (5-year totals)
+                                💼 Service Cost Estimate
                             </h2>
-                            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                                Compare the total cost of ownership for different infrastructure approaches
+                            <p className="text-xl text-gray-600 max-w-4xl mx-auto">
+                                Based on your inputs, here's an estimate of what your data-centre service could cost under different models.
+                                These are budgetary industry averages designed to help you compare options and understand how configuration affects cost.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {/* On-premises Card */}
-                            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-blue-300">
-                                <div className="text-center mb-6">
-                                    <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${ESB_BLUE}20` }}>
-                                        <svg className="w-8 h-8" style={{ color: ESB_BLUE }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">On-premises</h3>
-
-                                    {/* Yearly Cost Breakdown */}
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
-                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
-                                                €{results.onPremises.yearly['1 Year'].toLocaleString()}
-                                            </div>
+                        {/* Service Options Grid */}
+                        <div className="space-y-8">
+                            {/* 1️⃣ Retail Colocation */}
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                            <span className="text-2xl">1️⃣</span>
                                         </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
-                                            <div className="text-lg font-bold" style={{ color: ESB_BLUE }}>
-                                                €{results.onPremises.yearly['3 Years'].toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
-                                            <div className="text-xl font-bold" style={{ color: ESB_BLUE }}>
-                                                €{results.onPremises.yearly['5 Years'].toLocaleString()}
-                                            </div>
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-gray-900">Retail Colocation</h3>
+                                            <p className="text-gray-600">Estimated Price: €{results.servicePrices.retail} / kW / month</p>
+                                            <p className="text-gray-600">Estimated Annual Cost: €{(results.annualCosts.retail / 1000000).toFixed(2)} million</p>
                                         </div>
                                     </div>
                                 </div>
 
-
-                                <div className="space-y-3">
-                                    {Object.entries(results.onPremises.details).map(([key, value]) => (
-                                        <div key={key} className="border-l-4 border-blue-500 pl-4 py-2">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <span className="text-sm font-medium text-gray-900">{key}</span>
-                                                <span className="text-sm font-bold text-blue-600">€{value.toLocaleString()}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {key === 'Facility & Energy' && 'Energy costs + facility depreciation over 5 years'}
-                                                {key === 'Staffing' && 'Annual cost for dedicated facility staff (engineers, operators)'}
-                                                {key === 'Maintenance' && 'Annual maintenance cost as percentage of build cost'}
-                                                {key === 'Insurance' && 'Annual insurance cost for facility and equipment'}
-                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
-                                                {key === 'Connectivity' && 'Estimated network and connectivity costs'}
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="bg-blue-50 rounded-lg p-6 mb-4">
+                                    <h4 className="font-semibold text-blue-900 mb-2">📘 What this means:</h4>
+                                    <p className="text-blue-800 mb-3">
+                                        You rent individual racks or a small cage in a shared ESB facility.
+                                        ESB provides the building, power, cooling, and internet connectivity — you bring and manage your own servers.
+                                    </p>
+                                    <h4 className="font-semibold text-blue-900 mb-2">💡 Why it costs this much:</h4>
+                                    <p className="text-blue-800">
+                                        Higher per-kW price because of shared infrastructure, flexible space, and high power density.
+                                        Ideal for small to medium deployments that need professional uptime without building their own data centre.
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Colocation Card */}
-                            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-green-300">
-                                <div className="text-center mb-6">
-                                    <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: `${EMERALD_GREEN}20` }}>
-                                        <svg className="w-8 h-8" style={{ color: EMERALD_GREEN }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Colocation</h3>
-
-                                    {/* Yearly Cost Breakdown */}
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
-                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
-                                                €{results.colocation.yearly['1 Year'].toLocaleString()}
-                                            </div>
+                            {/* 2️⃣ Wholesale Colocation */}
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                            <span className="text-2xl">2️⃣</span>
                                         </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
-                                            <div className="text-lg font-bold" style={{ color: EMERALD_GREEN }}>
-                                                €{results.colocation.yearly['3 Years'].toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
-                                            <div className="text-xl font-bold" style={{ color: EMERALD_GREEN }}>
-                                                €{results.colocation.yearly['5 Years'].toLocaleString()}
-                                            </div>
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-gray-900">Wholesale Colocation</h3>
+                                            <p className="text-gray-600">Estimated Price: €{results.servicePrices.wholesale} / kW / month</p>
+                                            <p className="text-gray-600">Estimated Annual Cost: €{(results.annualCosts.wholesale / 1000000).toFixed(2)} million</p>
                                         </div>
                                     </div>
                                 </div>
 
-
-                                <div className="space-y-3">
-                                    {Object.entries(results.colocation.details).map(([key, value]) => (
-                                        <div key={key} className="border-l-4 border-green-500 pl-4 py-2">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <span className="text-sm font-medium text-gray-900">{key}</span>
-                                                <span className="text-sm font-bold text-green-600">€{value.toLocaleString()}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {key === 'Rack Space' && 'Monthly cost per kW of IT load for rack space and power'}
-                                                {key === 'Power & Cooling' && 'Energy costs passed through from colocation provider'}
-                                                {key === 'Connectivity' && 'Bandwidth costs + cross-connect to carrier networks'}
-                                                {key === 'Management' && 'Compliance overhead as percentage of base colo cost'}
-                                                {key === 'Compliance' && 'Estimated compliance and regulatory costs'}
-                                                {key === 'Setup' && 'Estimated initial setup and migration costs'}
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="bg-green-50 rounded-lg p-6 mb-4">
+                                    <h4 className="font-semibold text-green-900 mb-2">📘 What this means:</h4>
+                                    <p className="text-green-800 mb-3">
+                                        You lease an entire data-hall suite or large dedicated area (typically &gt; 500 kW).
+                                        You manage the servers and layout; ESB provides the environment, power, and fibre links.
+                                    </p>
+                                    <h4 className="font-semibold text-green-900 mb-2">💡 Why it costs less per kW:</h4>
+                                    <p className="text-green-800">
+                                        You use a bigger space and commit longer-term, so unit costs drop.
+                                        Best suited for large enterprises or cloud operators that want control at scale.
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Public Cloud Card */}
-                            <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-gray-400">
-                                <div className="text-center mb-6">
-                                    <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-gray-100">
-                                        <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Public Cloud</h3>
-
-                                    {/* Yearly Cost Breakdown */}
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">1 Year</div>
-                                            <div className="text-lg font-bold text-gray-600">
-                                                €{results.publicCloud.yearly['1 Year'].toLocaleString()}
-                                            </div>
+                            {/* 3️⃣ Dedicated Hosting */}
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                                            <span className="text-2xl">3️⃣</span>
                                         </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">3 Years</div>
-                                            <div className="text-lg font-bold text-gray-600">
-                                                €{results.publicCloud.yearly['3 Years'].toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-sm text-gray-600 mb-1">5 Years</div>
-                                            <div className="text-xl font-bold text-gray-600">
-                                                €{results.publicCloud.yearly['5 Years'].toLocaleString()}
-                                            </div>
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-gray-900">Dedicated Hosting</h3>
+                                            <p className="text-gray-600">Estimated Price: €{results.servicePrices.dedicated} / kW / month</p>
+                                            <p className="text-gray-600">Estimated Annual Cost: €{(results.annualCosts.dedicated / 1000000).toFixed(2)} million</p>
                                         </div>
                                     </div>
                                 </div>
 
-
-                                <div className="space-y-3">
-                                    {Object.entries(results.publicCloud.details).map(([key, value]) => (
-                                        <div key={key} className="border-l-4 border-gray-500 pl-4 py-2">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <span className="text-sm font-medium text-gray-900">{key}</span>
-                                                <span className="text-sm font-bold text-gray-600">€{value.toLocaleString()}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {key === 'Compute Instances' && 'Base monthly cost for compute instances and processing power'}
-                                                {key === 'Storage' && 'Monthly cost per GB of data storage'}
-                                                {key === 'Network' && 'Data egress costs + dedicated interconnect fees'}
-                                                {key === 'Management' && 'Support cost as percentage of compute + storage + egress'}
-                                                {key === 'Data Transfer' && 'Cost per GB of data transferred out of cloud'}
-                                                {key === 'Support' && 'Estimated additional support and management costs'}
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="bg-purple-50 rounded-lg p-6 mb-4">
+                                    <h4 className="font-semibold text-purple-900 mb-2">📘 What this means:</h4>
+                                    <p className="text-purple-800 mb-3">
+                                        ESB provides physical servers that are 100% dedicated to your organisation.
+                                        You get full security and performance, without sharing hardware with others.
+                                    </p>
+                                    <h4 className="font-semibold text-purple-900 mb-2">💡 Why it's higher priced:</h4>
+                                    <p className="text-purple-800">
+                                        Hardware, maintenance, and lifecycle costs are included.
+                                        Ideal for finance, healthcare, or government workloads that demand isolation.
+                                    </p>
                                 </div>
                             </div>
+
+                            {/* 4️⃣ Managed Service */}
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                                            <span className="text-2xl">4️⃣</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-gray-900">Managed Service</h3>
+                                            <p className="text-gray-600">Estimated Price: €{results.servicePrices.managed} / kW / month</p>
+                                            <p className="text-gray-600">Estimated Annual Cost: €{(results.annualCosts.managed / 1000000).toFixed(2)} million</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-orange-50 rounded-lg p-6 mb-4">
+                                    <h4 className="font-semibold text-orange-900 mb-2">📘 What this means:</h4>
+                                    <p className="text-orange-800 mb-3">
+                                        ESB not only hosts your equipment but also operates, monitors, and maintains it for you.
+                                        This "turn-key" option includes support, software patching, and uptime guarantees.
+                                    </p>
+                                    <h4 className="font-semibold text-orange-900 mb-2">💡 Why it costs more:</h4>
+                                    <p className="text-orange-800">
+                                        Adds staffing, monitoring, and management overhead.
+                                        Great for companies that want to focus on business, not infrastructure.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 5️⃣ AI / GPU Pod */}
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4">
+                                            <span className="text-2xl">5️⃣</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-bold text-gray-900">AI / GPU Pod</h3>
+                                            <p className="text-gray-600">Estimated Price: €{results.servicePrices.ai} / kW / month</p>
+                                            <p className="text-gray-600">Estimated Annual Cost: €{(results.annualCosts.ai / 1000000).toFixed(2)} million</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-red-50 rounded-lg p-6 mb-4">
+                                    <h4 className="font-semibold text-red-900 mb-2">📘 What this means:</h4>
+                                    <p className="text-red-800 mb-3">
+                                        Purpose-built zone for high-density GPU or AI computing with advanced liquid cooling.
+                                        Designed for workloads like model training, rendering, or simulation.
+                                    </p>
+                                    <h4 className="font-semibold text-red-900 mb-2">💡 Why it's the most expensive:</h4>
+                                    <p className="text-red-800">
+                                        High-power density, cooling efficiency, and premium hardware integration drive costs up.
+                                        Ideal for AI, analytics, and research environments.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* How the Estimate Works */}
+                        <div className="mt-16 bg-white rounded-xl shadow-lg p-8">
+                            <h3 className="text-2xl font-bold text-gray-900 mb-6">⚙️ How the Estimate Works</h3>
+                            <p className="text-gray-700 mb-6">
+                                These figures adjust dynamically from your answers:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold text-gray-900 mb-2">Higher Tier</h4>
+                                    <p className="text-sm text-gray-600">= more redundancy and cost</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold text-gray-900 mb-2">More GPU share</h4>
+                                    <p className="text-sm text-gray-600">= more power & cooling</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold text-gray-900 mb-2">Higher renewable target</h4>
+                                    <p className="text-sm text-gray-600">= greener but costlier energy sourcing</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold text-gray-900 mb-2">Disaster recovery</h4>
+                                    <p className="text-sm text-gray-600">adds a second site component</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="font-semibold text-gray-900 mb-2">Contract length</h4>
+                                    <p className="text-sm text-gray-600">and region slightly change rates</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Assumptions Used */}
+                        <div className="mt-8 bg-white rounded-xl shadow-lg p-8">
+                            <h3 className="text-2xl font-bold text-gray-900 mb-6">📈 Assumptions Used</h3>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                                    <thead>
+                                        <tr className="bg-gray-100">
+                                            <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">Parameter</th>
+                                            <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">Typical Value</th>
+                                            <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">Source / Reference</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="border-b">
+                                            <td className="py-3 px-4 text-sm text-gray-900">CapEx per MW</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">€8–10 million / MW (Tier III modular)</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">Uptime Institute & Bitpower Ireland 2024</td>
+                                        </tr>
+                                        <tr className="border-b">
+                                            <td className="py-3 px-4 text-sm text-gray-900">Power Usage Effectiveness (PUE)</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">1.35 – 1.45</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">ASHRAE / Uptime standards</td>
+                                        </tr>
+                                        <tr className="border-b">
+                                            <td className="py-3 px-4 text-sm text-gray-900">Electricity Price</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">€0.10 – €0.15 / kWh</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">SEAI Commercial Energy Prices 2024</td>
+                                        </tr>
+                                        <tr className="border-b">
+                                            <td className="py-3 px-4 text-sm text-gray-900">€/kW/month Base Rates</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">€160 – €400 / kW / month</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">CBRE & Structure Research 2024</td>
+                                        </tr>
+                                        <tr className="border-b">
+                                            <td className="py-3 px-4 text-sm text-gray-900">Discount Rate (for feasibility)</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">8%</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">EY Infrastructure 2024</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="py-3 px-4 text-sm text-gray-900">Accuracy Range</td>
+                                            <td className="py-3 px-4 text-sm text-gray-900">±10% (budgetary level)</td>
+                                            <td className="py-3 px-4 text-sm text-gray-600">Common pre-feasibility tolerance</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Disclaimer */}
+                        <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-yellow-900 mb-3">⚠️ Disclaimer</h3>
+                            <p className="text-yellow-800 text-sm mb-3">
+                                These prices are illustrative industry averages for early-stage feasibility and business-case planning.
+                                They are not binding quotations and may vary with final site location, power availability, equipment specification, market conditions, and contract terms.
+                            </p>
+                            <p className="text-yellow-800 text-sm">
+                                ESB / tool output aims for approx. ±10% accuracy, not exact prediction.
+                                Benchmarks are based on public data from: Bitpower Ireland Q4 2024, CBRE Data Centre Report 2024, Uptime Institute, SEAI, and EY Infrastructure Benchmarks.
+                            </p>
                         </div>
                     </div>
                 </section>
             )}
 
-            {/* Floating Survey Button */}
-            <button
-                onClick={openSurveyModal}
-                className={`fixed bottom-6 right-6 px-4 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all duration-200 z-[9999] ${hasSubmittedSurvey
-                    ? 'bg-gray-500 text-white cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
-                disabled={hasSubmittedSurvey}
-                style={{ position: 'fixed', zIndex: 9999 }}
-            >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-                <span className="hidden sm:inline">
-                    {hasSubmittedSurvey ? 'Survey Submitted' : 'Survey Form'}
-                </span>
-            </button>
-
-            {/* Survey Modal */}
-            {isSurveyModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-gray-900">Advanced Survey</h3>
-                            <button
-                                onClick={closeSurveyModal}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSurveySubmit} className="space-y-4">
-
-                            {/* Primary Use */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-1">
-                                    Primary Use *
-                                </label>
-                                <select
-                                    name="primaryUse"
-                                    value={surveyData.primaryUse}
-                                    onChange={handleSurveyInputChange}
-                                    required
-                                    className="border rounded-md px-3 py-2 text-sm w-full"
-                                >
-                                    <option value="">Select primary use</option>
-                                    <option value="AI">AI</option>
-                                    <option value="Analytics">Analytics</option>
-                                    <option value="ERP">ERP</option>
-                                    <option value="IoT">IoT</option>
-                                    <option value="HPC">HPC</option>
-                                    <option value="Mixed">Mixed</option>
-                                </select>
-                            </div>
-
-                            {/* Waste Heat Reuse */}
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    name="wasteHeatReuse"
-                                    checked={surveyData.wasteHeatReuse}
-                                    onChange={handleSurveyInputChange}
-                                    className="mr-2"
-                                />
-                                <label className="text-gray-700 font-medium text-sm">
-                                    Accept waste-heat reuse
-                                </label>
-                            </div>
-
-                            {/* PUE Expectation */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-1">
-                                    PUE Expectation: {surveyData.pueExpectation}
-                                </label>
-                                <input
-                                    type="range"
-                                    name="pueExpectation"
-                                    min="1.1"
-                                    max="2.0"
-                                    step="0.05"
-                                    value={surveyData.pueExpectation}
-                                    onChange={handleSurveyInputChange}
-                                    className="w-full"
-                                />
-                                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                    <span>1.1</span>
-                                    <span>2.0</span>
-                                </div>
-                            </div>
-
-                            {/* Commercial Preference */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-2">
-                                    Commercial Preference *
-                                </label>
-                                <div className="space-y-2">
-                                    {['CapEx', 'OpEx', 'Flexible'].map(option => (
-                                        <label key={option} className="flex items-center">
-                                            <input
-                                                type="radio"
-                                                name="commercialPreference"
-                                                value={option}
-                                                checked={surveyData.commercialPreference === option}
-                                                onChange={handleSurveyInputChange}
-                                                className="mr-2"
-                                                required
-                                            />
-                                            <span className="text-sm text-gray-700">{option}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Budget Envelopes */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-gray-700 font-medium text-sm mb-1">
-                                        CapEx €
-                                    </label>
-                                    <input
-                                        type="number"
-                                        name="capexBudget"
-                                        value={surveyData.capexBudget}
-                                        onChange={handleSurveyInputChange}
-                                        placeholder="Optional"
-                                        className="border rounded-md px-3 py-2 text-sm w-full"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium text-sm mb-1">
-                                        OpEx €/month
-                                    </label>
-                                    <input
-                                        type="number"
-                                        name="opexBudget"
-                                        value={surveyData.opexBudget}
-                                        onChange={handleSurveyInputChange}
-                                        placeholder="Optional"
-                                        className="border rounded-md px-3 py-2 text-sm w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Contract Length */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-1">
-                                    Contract Length *
-                                </label>
-                                <select
-                                    name="contractLength"
-                                    value={surveyData.contractLength}
-                                    onChange={handleSurveyInputChange}
-                                    required
-                                    className="border rounded-md px-3 py-2 text-sm w-full"
-                                >
-                                    <option value="">Select contract length</option>
-                                    <option value="1 yr">1 year</option>
-                                    <option value="3 yr">3 years</option>
-                                    <option value="5+ yr">5+ years</option>
-                                </select>
-                            </div>
-
-                            {/* Sustainability Target */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-1">
-                                    Sustainability Target *
-                                </label>
-                                <select
-                                    name="sustainabilityTarget"
-                                    value={surveyData.sustainabilityTarget}
-                                    onChange={handleSurveyInputChange}
-                                    required
-                                    className="border rounded-md px-3 py-2 text-sm w-full"
-                                >
-                                    <option value="">Select sustainability target</option>
-                                    <option value="0%">0% renewable</option>
-                                    <option value="50%">50% renewable</option>
-                                    <option value="100%">100% renewable</option>
-                                </select>
-                            </div>
-
-                            {/* Compliance */}
-                            <div>
-                                <label className="block text-gray-700 font-medium text-sm mb-2">
-                                    Compliance (select all that apply)
-                                </label>
-                                <div className="space-y-2">
-                                    {['GxP', 'ISO', 'HIPAA', 'PCI', 'None'].map(option => (
-                                        <label key={option} className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                value={option}
-                                                checked={surveyData.compliance.includes(option)}
-                                                onChange={handleComplianceChange}
-                                                className="mr-2"
-                                            />
-                                            <span className="text-sm text-gray-700">{option}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors duration-200"
-                            >
-                                Submit Survey
-                            </button>
-                        </form>
-
-                        {/* Cancel Button */}
-                        <button
-                            onClick={closeSurveyModal}
-                            className="w-full text-center text-gray-500 hover:text-gray-700 mt-2 text-sm"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50">
-                    Thank you, your survey was submitted.
-                </div>
-            )}
 
             <Footer />
         </div>
