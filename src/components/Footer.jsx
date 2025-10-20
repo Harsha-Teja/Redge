@@ -1,7 +1,7 @@
 /**
  * Footer.jsx
  *
- * A four-column footer for ReDge Discovery Tool with ESB branding.
+ * A four-column footer for ReDge Modular DC Tool with ESB branding.
  * Columns: About ReDge, Our Objective, Privacy & Data Use, Internal Use.
  */
 export default function Footer()
@@ -52,7 +52,7 @@ export default function Footer()
                                 href="/analysis"
                                 className="block text-sm text-esbBlue hover:text-blue-700 transition-colors"
                             >
-                                Analysis
+                                Edge Storage Analysis
                             </a>
                             <a
                                 href="/calculations"

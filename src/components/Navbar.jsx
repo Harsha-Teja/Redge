@@ -23,15 +23,17 @@ export default function Navbar()
     const getActiveTab = () =>
     {
         const path = location.pathname
-        if (path === '/' || path === '/discover') return 'discover'
+        if (path === '/' || path === '/discover') return 'modular-dc'
         if (path === '/knowledge-base') return 'knowledge-base'
-        return 'discover' // default
+        if (path === '/edge-storage') return 'edge-storage'
+        return 'modular-dc' // default
     }
 
     const activeTab = getActiveTab()
 
     const navigationItems = [
-        { id: 'discover', label: 'Discover', href: '/discover' },
+        { id: 'modular-dc', label: 'Modular DC', href: '/discover' },
+        { id: 'edge-storage', label: 'Edge Storage', href: '/edge-storage' },
         { id: 'knowledge-base', label: 'Knowledge Base', href: '/knowledge-base' }
     ]
 

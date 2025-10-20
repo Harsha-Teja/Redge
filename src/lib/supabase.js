@@ -229,3 +229,106 @@ export const fetchContactSubmissions = async () =>
     }
 }
 
+/**
+ * Submits edge storage interest form data to Supabase
+ * @param {Object} formData - The form data to submit
+ * @returns {Promise<Object>} - Result object with success status and data/error
+ */
+export const submitEdgeStorageInterest = async (formData) =>
+{
+    try
+    {
+        console.log('Submitting edge storage interest to Supabase')
+
+        const { data, error } = await supabase
+            .from('edge_storage_interest')
+            .insert([
+                {
+                    company_name: formData.company_name,
+                    contact_name: formData.contact_name,
+                    email: formData.email,
+                    phone: formData.phone || null,
+                    business_sector: formData.business_sector,
+                    location_city: formData.location_city,
+                    current_storage_method: formData.current_storage_method,
+                    data_volume_tb: formData.data_volume_tb,
+                    backup_challenge: formData.backup_challenge,
+                    interest_local_storage: formData.interest_local_storage,
+                    primary_use_case: formData.primary_use_case,
+                    data_sovereignty_importance: formData.data_sovereignty_importance,
+                    preferred_contract_length: formData.preferred_contract_length,
+                    budget_range: formData.budget_range,
+                    concerns: formData.concerns,
+                    comments: formData.comments || null,
+                    followup_consent: formData.followup_consent,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude
+                }
+            ])
+            .select()
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message
+            }
+        }
+
+        console.log('Edge storage interest submitted successfully:', data)
+        return {
+            success: true,
+            data: data[0]
+        }
+    }
+    catch (err)
+    {
+        console.error('Error submitting edge storage interest:', err)
+        return {
+            success: false,
+            error: err.message
+        }
+    }
+}
+
+/**
+ * Fetches all edge storage interest submissions from Supabase
+ * @returns {Promise<Object>} - Result object with success status and submissions/error
+ */
+export const fetchEdgeStorageSubmissions = async () =>
+{
+    try
+    {
+        console.log('Fetching edge storage interest submissions from Supabase')
+
+        const { data, error } = await supabase
+            .from('edge_storage_interest')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+        if (error)
+        {
+            console.error('Supabase error:', error)
+            return {
+                success: false,
+                error: error.message
+            }
+        }
+
+        console.log('Edge storage interest submissions fetched successfully:', data)
+        return {
+            success: true,
+            submissions: data
+        }
+    }
+    catch (err)
+    {
+        console.error('Error fetching edge storage interest submissions:', err)
+        return {
+            success: false,
+            error: err.message
+        }
+    }
+}
+

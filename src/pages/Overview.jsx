@@ -1,7 +1,7 @@
 /**
  * Overview.jsx
  * 
- * Main landing page for the Ireland Edge Discovery tool.
+ * Main landing page for the ReDge Modular DC tool.
  * Features a hero section, customer form with map integration,
  * and results comparison for different infrastructure options.
  */
@@ -844,7 +844,7 @@ export default function Overview()
             >
                 <div className="max-w-7xl mx-auto text-center">
                     <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                        Discover Ireland's Modular Edge Opportunities
+                        Modular DC — Ireland's Edge Opportunities
                     </h1>
                     <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-4xl mx-auto">
                         Compare On-premises, Colocation, and Cloud while factoring in energy,
