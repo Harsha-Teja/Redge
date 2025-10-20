@@ -23,20 +23,18 @@ export default function Navbar()
     const getActiveTab = () =>
     {
         const path = location.pathname
-        if (path === '/' || path === '/discover') return 'discover'
-        if (path === '/latest') return 'latest'
-        if (path === '/sites') return 'sites'
-        if (path === '/analysis') return 'analysis'
-        return 'discover' // default
+        if (path === '/' || path === '/discover') return 'modular-dc'
+        if (path === '/knowledge-base') return 'knowledge-base'
+        if (path === '/edge-storage') return 'edge-storage'
+        return 'modular-dc' // default
     }
 
     const activeTab = getActiveTab()
 
     const navigationItems = [
-        { id: 'discover', label: 'Discover', href: '/discover' },
-        { id: 'sites', label: 'Sites', href: '/sites' },
-        { id: 'analysis', label: 'Analysis', href: '/analysis' },
-        { id: 'latest', label: 'Latest', href: '/latest' }
+        { id: 'modular-dc', label: 'Modular DC', href: '/discover' },
+        { id: 'edge-storage', label: 'Edge Storage', href: '/edge-storage' },
+        { id: 'knowledge-base', label: 'Knowledge Base', href: '/knowledge-base' }
     ]
 
     const handleContactInputChange = (e) =>

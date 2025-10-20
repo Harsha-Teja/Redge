@@ -64,6 +64,9 @@ export const submitFormToSupabase = async (formData) =>
                     mic_limit: formData.micLimit,
                     existing_load: formData.existingLoad,
                     location: formData.location,
+                    budget_range: formData.budgetRange,
+                    commercial_model: formData.commercialModel,
+                    backup_dr: formData.backupDR,
                     submitted_at: new Date().toISOString()
                 }
             ])
@@ -227,30 +230,39 @@ export const fetchContactSubmissions = async () =>
 }
 
 /**
- * Submits survey form data to Supabase
- * @param {Object} surveyData - The survey form data to submit
+ * Submits edge storage interest form data to Supabase
+ * @param {Object} formData - The form data to submit
  * @returns {Promise<Object>} - Result object with success status and data/error
  */
-export const submitSurveyToSupabase = async (surveyData) =>
+export const submitEdgeStorageInterest = async (formData) =>
 {
     try
     {
-        console.log('Submitting survey form data to Supabase:', surveyData)
+        console.log('Submitting edge storage interest to Supabase')
 
         const { data, error } = await supabase
-            .from('survey_submissions')
+            .from('edge_storage_interest')
             .insert([
                 {
-                    primary_use: surveyData.primaryUse,
-                    waste_heat_reuse: surveyData.wasteHeatReuse,
-                    pue_expectation: parseFloat(surveyData.pueExpectation),
-                    commercial_preference: surveyData.commercialPreference,
-                    capex_budget: surveyData.capexBudget ? parseInt(surveyData.capexBudget) : null,
-                    opex_budget: surveyData.opexBudget ? parseInt(surveyData.opexBudget) : null,
-                    contract_length: surveyData.contractLength,
-                    sustainability_target: surveyData.sustainabilityTarget,
-                    compliance: surveyData.compliance,
-                    submitted_at: new Date().toISOString()
+                    company_name: formData.company_name,
+                    contact_name: formData.contact_name,
+                    email: formData.email,
+                    phone: formData.phone || null,
+                    business_sector: formData.business_sector,
+                    location_city: formData.location_city,
+                    current_storage_method: formData.current_storage_method,
+                    data_volume_tb: formData.data_volume_tb,
+                    backup_challenge: formData.backup_challenge,
+                    interest_local_storage: formData.interest_local_storage,
+                    primary_use_case: formData.primary_use_case,
+                    data_sovereignty_importance: formData.data_sovereignty_importance,
+                    preferred_contract_length: formData.preferred_contract_length,
+                    budget_range: formData.budget_range,
+                    concerns: formData.concerns,
+                    comments: formData.comments || null,
+                    followup_consent: formData.followup_consent,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude
                 }
             ])
             .select()
@@ -264,60 +276,59 @@ export const submitSurveyToSupabase = async (surveyData) =>
             }
         }
 
-        console.log('Survey form submitted successfully:', data)
+        console.log('Edge storage interest submitted successfully:', data)
         return {
             success: true,
             data: data[0]
         }
-
-    } catch (error)
+    }
+    catch (err)
     {
-        console.error('Error submitting survey form:', error)
+        console.error('Error submitting edge storage interest:', err)
         return {
             success: false,
-            error: error.message
+            error: err.message
         }
     }
 }
 
 /**
- * Fetches all survey form submissions from Supabase
+ * Fetches all edge storage interest submissions from Supabase
  * @returns {Promise<Object>} - Result object with success status and submissions/error
  */
-export const fetchSurveySubmissions = async () =>
+export const fetchEdgeStorageSubmissions = async () =>
 {
     try
     {
-        console.log('Fetching survey form submissions from Supabase')
+        console.log('Fetching edge storage interest submissions from Supabase')
 
         const { data, error } = await supabase
-            .from('survey_submissions')
+            .from('edge_storage_interest')
             .select('*')
-            .order('submitted_at', { ascending: false })
+            .order('created_at', { ascending: false })
 
         if (error)
         {
             console.error('Supabase error:', error)
             return {
                 success: false,
-                error: error.message,
-                submissions: []
+                error: error.message
             }
         }
 
-        console.log('Survey form submissions fetched successfully:', data)
+        console.log('Edge storage interest submissions fetched successfully:', data)
         return {
             success: true,
             submissions: data
         }
-
-    } catch (error)
+    }
+    catch (err)
     {
-        console.error('Error fetching survey form submissions:', error)
+        console.error('Error fetching edge storage interest submissions:', err)
         return {
             success: false,
-            error: error.message,
-            submissions: []
+            error: err.message
         }
     }
 }
+

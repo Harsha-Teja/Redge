@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS form_submissions_customer (
     mic_limit TEXT,
     existing_load TEXT,
     location TEXT,
+    budget_range TEXT,
+    commercial_model TEXT,
+    backup_dr TEXT,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -127,3 +130,56 @@ CREATE POLICY "Allow reading survey submissions" ON survey_submissions
 
 -- Add a comment to the table
 COMMENT ON TABLE survey_submissions IS 'Stores advanced survey form submissions from the ReDge website';
+
+-- Create edge storage interest table
+CREATE TABLE IF NOT EXISTS edge_storage_interest (
+    id BIGSERIAL PRIMARY KEY,
+    company_name TEXT NOT NULL,
+    contact_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    business_sector TEXT NOT NULL,
+    location_city TEXT NOT NULL,
+    current_storage_method TEXT NOT NULL,
+    data_volume_tb TEXT NOT NULL,
+    backup_challenge TEXT NOT NULL,
+    interest_local_storage TEXT NOT NULL,
+    primary_use_case TEXT NOT NULL,
+    data_sovereignty_importance TEXT NOT NULL,
+    preferred_contract_length TEXT NOT NULL,
+    budget_range TEXT NOT NULL,
+    concerns TEXT[] DEFAULT '{}',
+    comments TEXT,
+    followup_consent BOOLEAN NOT NULL DEFAULT FALSE,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create an index on submitted_at for faster queries
+CREATE INDEX IF NOT EXISTS idx_edge_storage_interest_submitted_at ON edge_storage_interest(submitted_at);
+
+-- Create an index on email for faster lookups
+CREATE INDEX IF NOT EXISTS idx_edge_storage_interest_email ON edge_storage_interest(email);
+
+-- Create an index on business_sector for filtering
+CREATE INDEX IF NOT EXISTS idx_edge_storage_interest_business_sector ON edge_storage_interest(business_sector);
+
+-- Create an index on interest_local_storage for filtering
+CREATE INDEX IF NOT EXISTS idx_edge_storage_interest_interest ON edge_storage_interest(interest_local_storage);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE edge_storage_interest ENABLE ROW LEVEL SECURITY;
+
+-- Create a policy that allows anyone to insert (for form submissions)
+CREATE POLICY "Allow public edge storage interest submissions" ON edge_storage_interest
+    FOR INSERT WITH CHECK (true);
+
+-- Create a policy that allows reading for authenticated users
+CREATE POLICY "Allow reading edge storage interest submissions" ON edge_storage_interest
+    FOR SELECT USING (true);
+
+-- Add a comment to the table
+COMMENT ON TABLE edge_storage_interest IS 'Stores edge storage interest form submissions from the ReDge website';
