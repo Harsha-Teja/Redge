@@ -153,7 +153,7 @@ function Calculations()
                                     </code>
                                 </div>
                                 <p className="text-gray-600 mb-4">
-                                    <strong>Purpose:</strong> Converts your total IT load in kW to megawatts — the base size of the data centre.
+                                    <strong>Purpose:</strong> Converts your total IT load in kW to megawatts - the base size of the data centre.
                                 </p>
                                 <div className="bg-blue-50 rounded-lg p-4">
                                     <p className="text-sm text-blue-800">

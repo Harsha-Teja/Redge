@@ -299,7 +299,7 @@ export default function KnowledgeBase()
                                     Why do we need data centres?
                                 </h3>
                                 <p className="text-gray-700 leading-relaxed mb-4">
-                                    Because everything we do creates and uses digital data — websites, cloud storage, AI, and apps.
+                                    Because everything we do creates and uses digital data - websites, cloud storage, AI, and apps.
                                     Data centres make sure that:
                                 </p>
                                 <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
@@ -423,7 +423,7 @@ export default function KnowledgeBase()
                                 <p className="text-gray-700 leading-relaxed">
                                     A modular data centre is built from pre-fabricated blocks (modules) instead of constructing the entire building at once.
                                     Each module has its own cooling and power.
-                                    You can start small and add more as demand grows — just like stacking Lego blocks.
+                                    You can start small and add more as demand grows - just like stacking Lego blocks.
                                 </p>
                             </div>
 
@@ -447,7 +447,7 @@ export default function KnowledgeBase()
                                         <tbody>
                                             <tr className="border-b">
                                                 <td className="py-3 px-4 text-sm font-medium text-gray-900">I</td>
-                                                <td className="py-3 px-4 text-sm text-gray-700">Basic — power/cooling not redundant</td>
+                                                <td className="py-3 px-4 text-sm text-gray-700">Basic - power/cooling not redundant</td>
                                                 <td className="py-3 px-4 text-sm text-gray-700">99.67%</td>
                                             </tr>
                                             <tr className="border-b">
@@ -479,7 +479,7 @@ export default function KnowledgeBase()
                                     What is "MW" and "kW"?
                                 </h3>
                                 <p className="text-gray-700 leading-relaxed mb-4">
-                                    They measure electrical power — how fast energy is used.
+                                    They measure electrical power - how fast energy is used.
                                 </p>
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full bg-gray-50 rounded-lg border border-gray-200">
@@ -494,7 +494,7 @@ export default function KnowledgeBase()
                                             <tr className="border-b">
                                                 <td className="py-3 px-4 text-sm font-medium text-gray-900">Watt (W)</td>
                                                 <td className="py-3 px-4 text-sm text-gray-700">Power of one light bulb.</td>
-                                                <td className="py-3 px-4 text-sm text-gray-700">—</td>
+                                                <td className="py-3 px-4 text-sm text-gray-700">-</td>
                                             </tr>
                                             <tr className="border-b">
                                                 <td className="py-3 px-4 text-sm font-medium text-gray-900">kW (kilowatt)</td>
@@ -751,13 +751,13 @@ export default function KnowledgeBase()
                                     What factors affect customer pricing?
                                 </h3>
                                 <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                                    <li>Power (kW) — main cost driver.</li>
-                                    <li>Tier level — more reliability = higher cost.</li>
-                                    <li>GPU % / density — high-density = more cooling = higher cost.</li>
-                                    <li>Renewable target — adds green premium.</li>
-                                    <li>Contract term — longer = lower monthly rate.</li>
-                                    <li>Disaster recovery — doubles capacity, adds redundancy.</li>
-                                    <li>Region — Dublin cheaper connectivity; regions cheaper land.</li>
+                                    <li>Power (kW) - main cost driver.</li>
+                                    <li>Tier level - more reliability = higher cost.</li>
+                                    <li>GPU % / density - high-density = more cooling = higher cost.</li>
+                                    <li>Renewable target - adds green premium.</li>
+                                    <li>Contract term - longer = lower monthly rate.</li>
+                                    <li>Disaster recovery - doubles capacity, adds redundancy.</li>
+                                    <li>Region - Dublin cheaper connectivity; regions cheaper land.</li>
                                 </ul>
                             </div>
 

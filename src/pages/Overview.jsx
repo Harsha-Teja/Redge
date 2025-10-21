@@ -844,7 +844,7 @@ export default function Overview()
             >
                 <div className="max-w-7xl mx-auto text-center">
                     <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                        Modular DC — Ireland's Edge Opportunities
+                        Modular DC - Ireland's Edge Opportunities
                     </h1>
                     <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-4xl mx-auto">
                         Compare On-premises, Colocation, and Cloud while factoring in energy,
@@ -2113,7 +2113,7 @@ export default function Overview()
                                     <h4 className="font-semibold text-blue-900 mb-2">📘 What this means:</h4>
                                     <p className="text-blue-800 mb-3">
                                         You rent individual racks or a small cage in a shared ESB facility.
-                                        ESB provides the building, power, cooling, and internet connectivity — you bring and manage your own servers.
+                                        ESB provides the building, power, cooling, and internet connectivity - you bring and manage your own servers.
                                     </p>
                                     <h4 className="font-semibold text-blue-900 mb-2">💡 Why it costs this much:</h4>
                                     <p className="text-blue-800">
