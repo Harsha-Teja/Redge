@@ -421,6 +421,81 @@ export default function EdgeStorage()
                 </div>
             </div>
 
+            {/* Service Information Section */}
+            <div className="max-w-6xl mx-auto px-6 py-12">
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                            What We're Offering
+                        </h2>
+                        <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                            Ireland's first sovereign Disaster Recovery-as-a-Service (DRaaS) and Backup Storage platform,
+                            powered by ReDge's secure fibre network and modular data infrastructure.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                                🇮🇪 Your Data, Hosted in Ireland
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-esbBlue rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Full data sovereignty - your data stays in Ireland</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-esbBlue rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">GDPR and sector compliance guaranteed</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-esbBlue rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Ultra-low latency (&lt; 1 ms) via ReDge's fibre network</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-esbBlue rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Local support and direct access to Ireland's digital backbone</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                                💡 Why Choose Us Over Global Cloud
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-emeraldGreen rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Simple, transparent pricing per TB or backup plan</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-emeraldGreen rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Green infrastructure aligned with Ireland's net-zero goals</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-emeraldGreen rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">No complex cloud contracts or hidden costs</span>
+                                </div>
+                                <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-emeraldGreen rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                    <span className="text-gray-700">Designed for SMEs and startups</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                            "Secure. Local. Compliant. Your Data, Recovered and Stored in Ireland."
+                        </h3>
+                        <p className="text-gray-600">
+                            Designed for SMEs and startups that need reliable, compliant, and affordable data protection,
+                            fully hosted within Ireland — ensuring EU data sovereignty, rapid recovery, and ultra-low latency access.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* Map Section */}
             <div className="max-w-6xl mx-auto px-6 py-12">
                 <div className="bg-white rounded-lg shadow-lg p-8">
