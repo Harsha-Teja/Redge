@@ -69,25 +69,6 @@ function MapComponent({ selectedLocation, onLocationSelect, submissions })
                     </Popup>
                 </Marker>
             )}
-
-            {/* Show existing submissions */}
-            {submissions.map((submission, index) => (
-                <Marker
-                    key={index}
-                    position={[parseFloat(submission.latitude) || 53.4129, parseFloat(submission.longitude) || -8.2439]}
-                >
-                    <Popup>
-                        <div className="p-2">
-                            <h4 className="font-semibold text-gray-900">{submission.company_name}</h4>
-                            <p className="text-sm text-gray-600">{submission.location_city}</p>
-                            <p className="text-sm text-gray-600">{submission.business_sector}</p>
-                            <p className="text-sm text-esbBlue font-medium">
-                                Interest: {submission.interest_local_storage}
-                            </p>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
         </MapContainer>
     )
 }
@@ -510,7 +491,7 @@ export default function EdgeStorage()
                         />
                     </div>
                     <div className="mt-4 text-center text-gray-600">
-                        <p>{submissions.length} companies have expressed interest</p>
+                        <p>Select your location to see it on the map</p>
                     </div>
                 </div>
             </div>
