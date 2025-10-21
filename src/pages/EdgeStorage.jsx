@@ -388,7 +388,7 @@ export default function EdgeStorage()
                 <div className="max-w-6xl mx-auto px-6 py-12">
                     <div className="text-center">
                         <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                            Edge Storage — Local Backup and Disaster Recovery Service
+                            Edge Storage - Local Backup and Disaster Recovery Service
                         </h1>
                         <div className="max-w-4xl mx-auto">
                             <p className="text-lg text-gray-600 mb-2">
@@ -471,7 +471,7 @@ export default function EdgeStorage()
                         </h3>
                         <p className="text-gray-600">
                             Designed for SMEs and startups that need reliable, compliant, and affordable data protection,
-                            fully hosted within Ireland — ensuring EU data sovereignty, rapid recovery, and ultra-low latency access.
+                            fully hosted within Ireland - ensuring EU data sovereignty, rapid recovery, and ultra-low latency access.
                         </p>
                     </div>
                 </div>
